@@ -1,5 +1,5 @@
 {
-  "name": "phel-lang/phel-scaffolding",
+  "name": "phel-lang/phel-cli-gui",
   "keywords": [
     "phel",
     "lisp",
@@ -10,15 +10,19 @@
   "license": "MIT",
   "require": {
     "php": "^8.0",
+    "ext-ctype": "*",
+    "ext-iconv": "*",
     "ext-readline": "*",
-    "phel-lang/phel-lang": "^0.5"
+    "phel-lang/phel-lang": "^0.5",
+    "symfony/console": "^5.1 || ^6.0"
   },
   "require-dev": {
+    "roave/security-advisories": "dev-latest",
     "symfony/var-dumper": "5.4.x-dev"
   },
   "autoload": {
     "psr-4": {
-      "PhelGenerated\\": "src/PhelGenerated"
+      "PhelCliGui\\": "src/php/"
     }
   }
 }

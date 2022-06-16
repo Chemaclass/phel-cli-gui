@@ -1,0 +1,8 @@
+(ns phel-cli-gui\terminal-gui
+  (:use \PhelCliGui\TerminalGui))
+
+(def gui (php/new TerminalGui))
+
+(defn paint [column row text]
+  (php/-> gui (paint column row text)))
+
