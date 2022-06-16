@@ -1,10 +1,10 @@
 (ns phel-cli-gui-tests\terminal-gui-test
-  (:require phel-cli-gui\terminal-gui :refer [paint])
+  (:require phel-cli-gui\terminal-gui :refer [render])
   (:require phel\test :refer [deftest is]))
 
 (deftest test-nothing
   (is (= 1 1)))
 
 # TODO?
-#(deftest test-paint-on-position-0-0
-#  (is (= "0x0" (paint 0 0 "0x0"))))
+#(deftest test-render-on-position-0-0
+#  (is (= "0x0" (render 0 0 "0x0"))))

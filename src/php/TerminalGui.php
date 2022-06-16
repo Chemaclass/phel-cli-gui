@@ -19,7 +19,7 @@ final class TerminalGui
         $this->cursor = new Cursor($this->output);
     }
 
-    public function paint(int $column, int $row, string $text): void
+    public function render(int $column, int $row, string $text): void
     {
         $this->cursor->moveToPosition($column, $row);
         $this->output->write($text);

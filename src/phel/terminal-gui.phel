@@ -3,6 +3,6 @@
 
 (def gui (php/new TerminalGui))
 
-(defn paint [column row text]
-  (php/-> gui (paint column row text)))
+(defn render [column row text]
+  (php/-> gui (render column row text)))
 
