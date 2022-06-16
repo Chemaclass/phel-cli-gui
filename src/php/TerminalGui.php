@@ -49,11 +49,10 @@ final class TerminalGui
         $emptyLine = implode('', array_fill(0, $width - 2, ' '));
 
         $out = "┌{$borderLine}┐" . PHP_EOL;
-        for ($i = 0; $i < $height - 2; ++$i) {
-            $out .= "│{$emptyLine}│" . PHP_EOL;
-        }
+        $out .= str_repeat("│{$emptyLine}│" . PHP_EOL, $height - 2);
         $out .= "└{$borderLine}┘" . PHP_EOL;
 
+        $this->cursor->moveToPosition(0, 0);
         $this->write($out);
     }
 

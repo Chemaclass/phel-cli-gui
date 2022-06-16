@@ -1,9 +1,28 @@
 (ns phel-cli-gui\example
   (:require phel-cli-gui\terminal-gui :refer [clear-screen board render]))
 
-(clear-screen)
-(board 40 20)
+(def nano-seconds-delay 100000)
+(def max-width 20)
+(def max-height 5)
 
-(render 1 1 "1,1")
-(render 2 2 "2,2")
-(render 3 3 "3,3")
+(defn render-board [w h]
+  (clear-screen)
+  (board (+ w 1) (+ h 1))
+  (render 0 (+ h 2) "Start rendering!"))
+
+(render-board max-width max-height)
+
+(loop [w 1 h 1]
+  (if (>= h max-height)
+    (do
+      (clear-screen)
+      (render-board max-width max-height)
+      (recur (inc w) 1))
+    (do
+      (render w h (format "%d,%d" w h))
+      (php/usleep nano-seconds-delay)
+      (recur w (inc h)))))
+
+#(render 1 1 "1,1")
+#(render 2 2 "2,2")
+#(render 3 3 "3,3")
