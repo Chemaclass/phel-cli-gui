@@ -2,26 +2,33 @@
   (:require phel-cli-gui\terminal-gui :refer [clear-screen board render]))
 
 (def nano-seconds-delay 100000)
-(def max-width 20)
+(def max-width 10)
 (def max-height 5)
 
-(defn render-board [w h]
+(defn render-board [width height title]
   (clear-screen)
-  (board (+ w 1) (+ h 1))
-  (render 0 (+ h 2) "Start rendering!"))
+  (board (+ width 1) (+ height 1))
+  (render 0 (+ height 2) title))
 
-(render-board max-width max-height)
+(defn main [title]
+  (render-board max-width max-height title)
+  (loop [width 1 height 1]
+    (cond
+      # the exit condition
+      (and (>= height max-height) (>= width max-width)) (println "Finished")
 
-(loop [w 1 h 1]
-  (if (>= h max-height)
-    (do
-      (clear-screen)
-      (render-board max-width max-height)
-      (recur (inc w) 1))
-    (do
-      (render w h (format "%d,%d" w h))
-      (php/usleep nano-seconds-delay)
-      (recur w (inc h)))))
+      # move to the next column (right) after completing the current column
+      (>= height max-height) (do
+                               (clear-screen)
+                               (render-board max-width max-height title)
+                               (recur (inc width) 1))
+      # move to the next row (down)
+      true (do
+             (render width height (format "%d,%d" width height))
+             (php/usleep nano-seconds-delay)
+             (recur width (inc height))))))
+
+(main "Title example!")
 
 #(render 1 1 "1,1")
 #(render 2 2 "2,2")
