@@ -7,13 +7,14 @@ It uses the Cursor from the Symfony Command module.
 
 ```phel
 (ns phel-cli-gui\example
-  (:require phel-cli-gui\terminal-gui :refer [render]))
+  (:require phel-cli-gui\terminal-gui :refer [clear-screen board render]))
+
+(clear-screen)
+(board 40 20)
 
 (render 1 1 "1,1")
 (render 2 2 "2,2")
 (render 3 3 "3,3")
-
-(println)
 ```
 
 ## WIP

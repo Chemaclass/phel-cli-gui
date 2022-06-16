@@ -3,6 +3,12 @@
 
 (def gui (php/new TerminalGui))
 
+(defn clear-screen []
+  (php/-> gui (clearScreen)))
+
+(defn board [width height]
+  (php/-> gui (board width height)))
+
 (defn render [column row text]
   (php/-> gui (render column row text)))
 
