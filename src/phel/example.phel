@@ -5,8 +5,9 @@
 (def max-width 10)
 (def max-height 5)
 
+(clear-screen)
+
 (defn render-board [width height title]
-  (clear-screen)
   (board (+ width 1) (+ height 1))
   (render 0 (+ height 2) title))
 
@@ -19,7 +20,6 @@
 
       # move to the next column (right) after completing the current column
       (>= height max-height) (do
-                               (clear-screen)
                                (render-board max-width max-height title)
                                (recur (inc width) 1))
       # move to the next row (down)

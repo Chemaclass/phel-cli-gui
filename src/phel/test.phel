@@ -1,0 +1,16 @@
+(ns phel-cli-gui\test)
+
+#(loop [sum 0
+#       cnt 10]
+#  (if (= cnt 0)
+#    sum
+#    (recur (+ cnt sum) (dec cnt))))
+
+(def f (fn [sum cnt]
+         (let [b 1]
+#     (if (nil? next-direction) (recur snake))
+           (if (= cnt b)
+             sum
+             (recur (+ cnt sum) (dec cnt))))))
+
+(println (f 0 10))
