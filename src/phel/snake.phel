@@ -1,7 +1,7 @@
 (ns phel-cli-gui\snake
   (:require phel-cli-gui\terminal-gui :refer [clear-screen render-board render input-stream]))
 
-(def nano-seconds-delay 200000)
+(def nano-seconds-delay 150000)
 (def max-width 40)
 (def max-height 20)
 
@@ -31,20 +31,49 @@
   (for [t :in (snake :tail)]
     (render (t :x) (t :y) "x")))
 
+(defn render-goal [goal]
+  (render (goal :x) (goal :y) "A"))
+
+(defn check-game-over-collisions-with-itself [snake] "TODO")
+(defn check-game-over-collisions-with-board [snake] "TODO")
+
+(defn check-game-over-collisions
+  [snake]
+  (check-game-over-collisions-with-itself snake)
+  (check-game-over-collisions-with-board snake))
+
+(defn generate-new-goal []
+  {:x (rand-int (- max-width 3))
+   :y (rand-int (- max-height 3))})
+
+(defn update-goal [snake goal]
+  (if (and
+       (= (get-in snake [:head :x]) (goal :x))
+       (= (get-in snake [:head :y]) (goal :y)))
+    (generate-new-goal)
+    goal))
+
 (defn main []
-  (loop [snake {:head {:x 1 :y 1} :tail [] :direction :right}]
+  (loop [snake {:head {:x 1 :y 1} :tail [] :direction :right}
+         goal (generate-new-goal)]
     (render 50 0 (rand-int 100)) # debug to verify it's running
     (php/usleep nano-seconds-delay)
+
+    (render-board max-width max-height)
 
     (let [raw-in (php/fread input-stream 3)
           in (php/bin2hex raw-in)
           next-direction (directions in)
-          updated-snake (move-snake snake next-direction)]
+          updated-snake (move-snake snake next-direction)
+          updated-goal (update-goal snake goal)]
+
+      (check-game-over-collisions snake)
 
       (render 0 (+ max-height 3) (str (php/time) " - updated-snake" updated-snake))
-      (render-board max-width max-height)
       (render-snake updated-snake)
-      (recur updated-snake))))
+      (render-goal updated-goal)
+
+      (recur updated-snake updated-goal))))
 
 (clear-screen)
 (main)
