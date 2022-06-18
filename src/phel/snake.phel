@@ -20,17 +20,19 @@
   (if (nil? next-direction)
     (recur snake (snake :direction))
     (let [updated-snake (case next-direction
-                          :left (update-in snake [:x] dec)
-                          :right (update-in snake [:x] inc)
-                          :up (update-in snake [:y] dec)
-                          :down (update-in snake [:y] inc))]
+                          :left (update-in snake [:head :x] dec)
+                          :right (update-in snake [:head  :x] inc)
+                          :up (update-in snake [:head :y] dec)
+                          :down (update-in snake [:head :y] inc))]
       (merge updated-snake {:direction next-direction}))))
 
 (defn render-snake [snake]
-  (render (snake :x) (snake :y) "x"))
+  (render (get-in snake [:head :x]) (get-in snake [:head :y]) "X")
+  (for [t :in (snake :tail)]
+    (render (t :x) (t :y) "x")))
 
 (defn main []
-  (loop [snake {:x 1 :y 1 :direction :right}]
+  (loop [snake {:head {:x 1 :y 1} :tail [] :direction :right}]
     (render 50 0 (rand-int 100)) # debug to verify it's running
     (php/usleep nano-seconds-delay)
 
