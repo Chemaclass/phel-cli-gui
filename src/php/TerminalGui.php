@@ -51,7 +51,7 @@ final class TerminalGui
         $this->cursor->moveToPosition(0, 0);
     }
 
-    public function board(int $width, int $height): void
+    public function renderBoard(int $width, int $height): void
     {
         $this->width = $width;
         $this->height = $height;

@@ -1,5 +1,5 @@
 (ns phel-cli-gui\snake
-  (:require phel-cli-gui\terminal-gui :refer [clear-screen board render input-stream]))
+  (:require phel-cli-gui\terminal-gui :refer [clear-screen render-board render input-stream]))
 
 (def nano-seconds-delay 200000)
 (def max-width 40)
@@ -42,7 +42,7 @@
           updated-snake (move-snake snake next-direction)]
 
       (render 0 (+ max-height 3) (str (php/time) " - updated-snake" updated-snake))
-      (board max-width max-height)
+      (render-board max-width max-height)
       (render-snake updated-snake)
       (recur updated-snake))))
 
