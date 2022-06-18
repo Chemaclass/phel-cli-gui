@@ -53,10 +53,16 @@
     (generate-new-goal)
     goal))
 
+(defn debug-snake [snake]
+  (render 0 (+ max-height 3) (php/str_repeat " " 100)) # clean the line
+  (render 0 (+ max-height 3) (str (php/time) " - snake" snake)))
+
 (defn main []
-  (loop [snake {:head {:x 1 :y 1} :tail [] :direction :right}
+  (loop [snake {:head {:x 1 :y 1}
+                :tail []
+                :direction :right
+                :points 0}
          goal (generate-new-goal)]
-    (render 50 0 (rand-int 100)) # debug to verify it's running
     (php/usleep nano-seconds-delay)
 
     (render-board max-width max-height)
@@ -69,11 +75,16 @@
 
       (check-game-over-collisions snake)
 
-      (render 0 (+ max-height 3) (str (php/time) " - updated-snake" updated-snake))
+      (debug-snake updated-snake)
+
       (render-snake updated-snake)
       (render-goal updated-goal)
 
-      (recur updated-snake updated-goal))))
+      (recur
+       (if (id goal updated-goal)
+         updated-snake
+         (update-in updated-snake [:points] inc))
+       updated-goal))))
 
 (clear-screen)
 (main)
