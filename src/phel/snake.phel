@@ -3,7 +3,7 @@
 
 (def nano-seconds-delay 200000)
 (def max-width 10)
-(def max-height 5)
+(def max-height 10)
 
 (def key-left-arrow "1b5b44")
 (def key-down-arrow "1b5b42")
@@ -16,13 +16,15 @@
    key-right-arrow :right
    key-up-arrow :up})
 
-(defn move-snake [next-direction snake]
-  (case next-direction
-    :left (merge snake {:x (dec (snake :x))})
-    :right (merge snake {:x (inc (snake :x))})
-    :up (merge snake {:y (dec (snake :y))})
-    :down (merge snake {:y (inc (snake :y))})
-    nil (move-snake (snake :direction) snake)))
+(defn move-snake [snake next-direction]
+  (if (nil? next-direction)
+    (recur snake (snake :direction))
+    (let [updated-snake (case next-direction
+                          :left (update-in snake [:x] dec)
+                          :right (update-in snake [:x] inc)
+                          :up (update-in snake [:y] dec)
+                          :down (update-in snake [:y] inc))]
+      (merge updated-snake {:direction next-direction}))))
 
 (defn render-snake [snake]
   (render (snake :x) (snake :y) "x"))
@@ -32,25 +34,14 @@
     (render 50 0 (rand-int 100)) # debug to verify it's running
     (php/usleep nano-seconds-delay)
 
-    (let [raw-in (php/fread input-stream 6)
+    (let [raw-in (php/fread input-stream 3)
           in (php/bin2hex raw-in)
           next-direction (directions in)
-          updated-snake (move-snake next-direction snake)]
+          updated-snake (move-snake snake next-direction)]
 
-      (render 0 (+ max-height 3) (format "raw-in:%s, in:%s" raw-in in)) #degug
-      (render 0 (+ max-height 4) (str "A - updated-snake" updated-snake (rand-int 100)))
-      (cond
-        (nil? next-direction)(do
-                               (render 0 (+ max-height 5) (str "B - " snake (rand-int 100))) # for testing purposes
-                               (render-snake snake)
-                               (recur snake)) #keep the old direction
-        true (do
-               (render-snake updated-snake)
-               (render 0 (+ max-height 6) (str "C - " (merge snake updated-snake {:direction next-direction}) (rand-int 100))) # for testing purposes
-               (recur updated-snake))))))
+      (render 0 (+ max-height 3) (str (php/time) " - updated-snake" updated-snake))
+      (render-snake updated-snake)
+      (recur updated-snake))))
 
 (clear-screen)
-#(render 0 (+ max-height 2) "Current updated-snake")
 (main)
-
-# TODO: keep rending the board and update the updated-snake only when the user press a button
