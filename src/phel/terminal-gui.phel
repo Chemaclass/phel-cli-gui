@@ -1,7 +1,8 @@
 (ns phel-cli-gui\terminal-gui
   (:use \PhelCliGui\TerminalGui))
 
-(def gui (php/new TerminalGui))
+(def input-stream php/STDIN)
+(def gui (php/new TerminalGui input-stream))
 
 (defn clear-screen []
   (php/-> gui (clearScreen)))

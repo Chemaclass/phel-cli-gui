@@ -6,9 +6,7 @@ namespace PhelCliGui;
 
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Input\StreamableInputInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
-use Symfony\Component\Console\Output\OutputInterface;
 
 final class TerminalGui
 {
@@ -18,28 +16,45 @@ final class TerminalGui
     private int $width = 0;
     private int $height = 0;
 
-    public function __construct(?OutputFormatter $formatter = null)
+    /** @var resource */
+    private $inputStream;
+
+    private string|null|false $sttyMode = null;
+
+    public function __construct($inputStream = STDIN, ?OutputFormatter $formatter = null)
     {
+        $this->inputStream = $inputStream;
+
         $this->output = new BufferedOutput();
         $this->output->setFormatter($formatter ?? new OutputFormatter());
 
         $this->cursor = new Cursor($this->output);
-        $this->cursor->hide();
+        $this->execute();
     }
 
     public function __destruct()
     {
         $this->cursor->show();
+
+        stream_set_blocking($this->inputStream, true);
+        shell_exec(sprintf('stty %s', $this->sttyMode));
     }
 
-    public function board(int $width, int $height, $inputStream = STDIN): void
+    public function execute(): void
+    {
+        $this->cursor->hide();
+
+        stream_set_blocking($this->inputStream, false);
+        $this->sttyMode = shell_exec('stty -g');
+        shell_exec('stty -icanon -echo');
+
+        $this->cursor->moveToPosition(0, 0);
+    }
+
+    public function board(int $width, int $height): void
     {
         $this->width = $width;
         $this->height = $height;
-
-        stream_set_blocking($inputStream, false);
-        $sttyMode = shell_exec('stty -g');
-        shell_exec('stty -icanon -echo');
 
         $borderLine = implode('', array_fill(0, $width - 2, '─'));
         $emptyLine = implode('', array_fill(0, $width - 2, ' '));
@@ -50,9 +65,6 @@ final class TerminalGui
 
         $this->cursor->moveToPosition(0, 0);
         $this->write($out);
-
-        stream_set_blocking($inputStream, true);
-        shell_exec(sprintf('stty %s', $sttyMode));
     }
 
     public function clearScreen(): void

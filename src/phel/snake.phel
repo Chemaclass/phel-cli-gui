@@ -1,47 +1,56 @@
 (ns phel-cli-gui\snake
-  (:require phel-cli-gui\terminal-gui :refer [clear-screen board render]))
+  (:require phel-cli-gui\terminal-gui :refer [clear-screen board render input-stream]))
 
-(def input-stream php/STDIN)
-(def nano-seconds-delay 50000)
+(def nano-seconds-delay 200000)
 (def max-width 10)
 (def max-height 5)
 
-(def key-left-arrow "1b5b440a")
-(def key-down-arrow "1b5b420a")
-(def key-right-arrow "1b5b430a")
-(def key-up-arrow "1b5b410a")
+(def key-left-arrow "1b5b44")
+(def key-down-arrow "1b5b42")
+(def key-right-arrow "1b5b43")
+(def key-up-arrow "1b5b41")
 
 (def directions
-   key-left-arrow :left
+  {key-left-arrow :left
    key-down-arrow :down
    key-right-arrow :right
    key-up-arrow :up})
 
 (defn move-snake [next-direction snake]
   (case next-direction
-    :left {:x (dec (snake :x)) :y (snake :y)}
-    :right {:x (inc (snake :x)) :y (snake :y)}
-    :up {:x (snake :x) :y (dec (snake :y))}
-    :down {:x (snake :x) :y (inc (snake :y))}
-    nil snake))
+    :left (merge snake {:x (dec (snake :x))})
+    :right (merge snake {:x (inc (snake :x))})
+    :up (merge snake {:y (dec (snake :y))})
+    :down (merge snake {:y (inc (snake :y))})
+    nil (move-snake (snake :direction) snake)))
 
-(defn main [input-stream]
+(defn render-snake [snake]
+  (render (snake :x) (snake :y) "x"))
+
+(defn main []
   (loop [snake {:x 1 :y 1 :direction :right}]
+    (render 50 0 (rand-int 100)) # debug to verify it's running
+    (php/usleep nano-seconds-delay)
+
     (let [raw-in (php/fread input-stream 6)
           in (php/bin2hex raw-in)
           next-direction (directions in)
-          coordinates (move-snake next-direction snake)]
-      (println raw-in in)
+          updated-snake (move-snake next-direction snake)]
+
+      (render 0 (+ max-height 3) (format "raw-in:%s, in:%s" raw-in in)) #degug
+      (render 0 (+ max-height 4) (str "A - updated-snake" updated-snake (rand-int 100)))
       (cond
-        (nil? next-direction) (recur snake) #keep the old direction
+        (nil? next-direction)(do
+                               (render 0 (+ max-height 5) (str "B - " snake (rand-int 100))) # for testing purposes
+                               (render-snake snake)
+                               (recur snake)) #keep the old direction
         true (do
-               (php/usleep nano-seconds-delay)
-               (render (coordinates :x) (coordinates :y) "x")
-               (render 0 (+ max-height 5) (merge snake coordinates {:direction next})) # for testing purposes
-               (recur (merge snake coordinates {:direction next-direction})))))))
+               (render-snake updated-snake)
+               (render 0 (+ max-height 6) (str "C - " (merge snake updated-snake {:direction next-direction}) (rand-int 100))) # for testing purposes
+               (recur updated-snake))))))
 
 (clear-screen)
-(render 0 (+ max-height 2) "Current coordinates")
-(main input-stream)
+#(render 0 (+ max-height 2) "Current updated-snake")
+(main)
 
-# TODO: keep rending the board and update the coordinates only when the user press a button
+# TODO: keep rending the board and update the updated-snake only when the user press a button
