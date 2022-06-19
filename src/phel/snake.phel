@@ -7,21 +7,19 @@
   (:require phel-cli-gui\snake\logic :refer [generate-new-goal
                                              normalize-next-direction
                                              move-snake
-                                             snake-reach-goal?
                                              update-goal
                                              collision-with-board?
                                              grow-snake]))
+(def start-time (php/microtime true))
 
-(def nano-seconds-delay 250000)
-(def board {:width 30 :height 10})
+(def nano-seconds-delay 200000)
 (def goal-icon "A")
 (def snake-head-icon "X")
 (def snake-tail-icon "x")
 
-(defn sleeping-delay [snake]
+(defn sleep-delay [snake]
   (let [velocity (* (snake :points) 15000)
         nano-sec (- nano-seconds-delay velocity)]
-    (render 0 (inc (board :height)) (format "Level: %d" (snake :points)))
     (php/usleep nano-sec)))
 
 (defn render-snake [snake]
@@ -30,10 +28,9 @@
     (render (t :x) (t :y) snake-tail-icon)))
 
 (defn render-goal [goal]
-  (render 0 (+ 3 (board :height)) (str goal)) # for testing
   (render (goal :x) (goal :y) goal-icon))
 
-(defn render-game-over [snake]
+(defn render-game-over [board snake]
   (let [game-over-text "GAME OVER"
         game-over-text-len (php/strlen game-over-text)
         x-center (- (/ (board :width) 2) (/ game-over-text-len 2))
@@ -42,39 +39,54 @@
     (render x-center (inc y-center) (format "Points: %d" (snake :points)))
     (php/die "So much fun!\n")))
 
-(defn debug-snake [snake]
-  (render 0 (+ 2 (board :height)) (php/str_repeat " " 100)) # clean the line
-  (render 0 (+ 2 (board :height)) (str (php/time) " - snake" snake)))
+(defn playing-time []
+  (let [diff-time (- (php/microtime true) start-time)]
+    (format "%d secs" diff-time)))
+
+(defn clean-line [height]
+  (render 0 height (php/str_repeat " " 100)))
+
+(defn render-stats [board snake]
+  (clean-line (+ 1 (board :height)))
+  (render 0 (+ 1 (board :height)) (format "Level: %d" (snake :points)))
+  (clean-line (+ 2 (board :height)))
+  (render 0 (+ 2 (board :height)) (playing-time)))
+
+(defn debug-snake [board snake]
+  (clean-line (+ 3 (board :height)))
+  (render 0 (+ 3 (board :height)) (str "# snake" snake)))
 
 (defn main []
-  (loop [snake {:head {:x 2 :y 2}
+  (clear-screen)
+
+  (loop [board {:width 40 :height 20}
+         snake {:head {:x 2 :y 2}
                 :tail []
                 :direction :right
                 :points 0}
          goal (generate-new-goal board)]
 
-    (sleeping-delay snake)
+    (sleep-delay snake)
     (render-board board)
 
     (let [in (php/bin2hex (php/fread input-stream 3))
           next-direction (normalize-next-direction in)
           updated-snake (move-snake snake next-direction)
-          new-goal? (snake-reach-goal? snake goal)
           updated-goal (update-goal snake goal board)]
 
-      (if (collision-with-board? snake board) (render-game-over snake))
-
-      (debug-snake updated-snake)
+      (if (collision-with-board? board snake)
+        (render-game-over board snake))
 
       (render-snake updated-snake)
       (render-goal updated-goal)
+      (render-stats board updated-snake)
+      #(debug-snake board updated-snake)
 
       (let [new-goal (not= goal updated-goal)
             sn (if new-goal
                  (update-in updated-snake [:points] inc)
                  updated-snake)
             sn2 (if new-goal (grow-snake sn) sn)]
-        (recur sn2 updated-goal)))))
+        (recur board sn2 updated-goal)))))
 
-(clear-screen)
 (main)

@@ -37,7 +37,7 @@
           sn3 (update sn2 :tail |(push $ (snake :head)))]
       (merge sn3 {:direction next-direction}))))
 
-(defn collision-with-board? [snake board]
+(defn collision-with-board? [board snake]
   (or
    (>= 1 (get-in snake [:head :x]))
    (>= 0 (get-in snake [:head :y]))
@@ -54,7 +54,7 @@
       (recur {:width width :height height})
       pos)))
 
-(defn snake-reach-goal? [snake goal]
+(defn- snake-reach-goal? [snake goal]
   (and
    (= (get-in snake [:head :x]) (goal :x))
    (= (get-in snake [:head :y]) (goal :y))))
