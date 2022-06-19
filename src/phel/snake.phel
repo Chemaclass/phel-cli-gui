@@ -5,15 +5,14 @@
                                               input-stream])
 
   (:require phel-cli-gui\snake\logic :refer [generate-new-goal
-                                             directions
+                                             normalize-next-direction
                                              move-snake
                                              snake-reach-goal?
                                              update-goal
-                                             check-game-over-collisions]))
+                                             collision-with-board?]))
 
 (def nano-seconds-delay 50000)
-(def max-width 40)
-(def max-height 20)
+(def board {:width 40 :height 20})
 
 (defn render-snake [snake]
   (render (get-in snake [:head :x]) (get-in snake [:head :y]) "X")
@@ -23,28 +22,31 @@
 (defn render-goal [goal]
   (render (goal :x) (goal :y) "A"))
 
+(defn render-game-over []
+  (render (/ (board :width) 2) (/ (board :height) 2) "GAME OVER")
+  (php/die "So much fun!"))
+
 (defn debug-snake [snake]
-  (render 0 (+ max-height 3) (php/str_repeat " " 100)) # clean the line
-  (render 0 (+ max-height 3) (str (php/time) " - snake" snake)))
+  (render 0 (+ (board :height) 3) (php/str_repeat " " 100)) # clean the line
+  (render 0 (+ (board :height) 3) (str (php/time) " - snake" snake)))
 
 (defn main []
   (loop [snake {:head {:x 1 :y 1}
                 :tail []
                 :direction :right
                 :points 0}
-         goal (generate-new-goal max-width max-height)]
+         goal (generate-new-goal board)]
+
     (php/usleep nano-seconds-delay)
+    (render-board board)
 
-    (render-board max-width max-height)
-
-    (let [raw-in (php/fread input-stream 3)
-          in (php/bin2hex raw-in)
-          next-direction (directions in)
+    (let [in (php/bin2hex (php/fread input-stream 3))
+          next-direction (normalize-next-direction in)
           updated-snake (move-snake snake next-direction)
           new-goal? (snake-reach-goal? snake goal)
-          updated-goal (update-goal snake goal max-width max-height)]
+          updated-goal (update-goal snake goal board)]
 
-      (check-game-over-collisions snake)
+      (if (collision-with-board? snake board) (render-game-over))
 
       (debug-snake updated-snake)
 

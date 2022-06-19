@@ -7,7 +7,7 @@
 (defn clear-screen []
   (php/-> gui (clearScreen)))
 
-(defn render-board [width height]
+(defn render-board [{:width width :height height}]
   (php/-> gui (renderBoard width height)))
 
 (defn render [column row text]

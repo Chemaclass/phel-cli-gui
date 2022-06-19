@@ -4,8 +4,11 @@
 
 (deftest test-move-snake
   (let [snake {:head {:x 1 :y 1} :direction :up}]
+    (is (= {:head {:x 1 :y 0} :direction :up} (move-snake snake nil)))
     (is (= {:head {:x 0 :y 1} :direction :left} (move-snake snake :left)))
-    (is (= {:head {:x 2 :y 1} :direction :right} (move-snake snake :right)))))
+    (is (= {:head {:x 2 :y 1} :direction :right} (move-snake snake :right)))
+    (is (= {:head {:x 1 :y 0} :direction :up} (move-snake snake :up)))
+    (is (= {:head {:x 1 :y 2} :direction :down} (move-snake snake :down)))))
 
 (deftest test-snake-reach-goal?
   (let [goal {:x 2 :y 2}]
