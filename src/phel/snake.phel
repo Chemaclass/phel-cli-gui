@@ -1,30 +1,19 @@
 (ns phel-cli-gui\snake
-  (:require phel-cli-gui\terminal-gui :refer [clear-screen render-board render input-stream]))
+  (:require phel-cli-gui\terminal-gui :refer [clear-screen
+                                              render-board
+                                              render
+                                              input-stream])
 
-(def nano-seconds-delay 150000)
+  (:require phel-cli-gui\snake\logic :refer [generate-new-goal
+                                             directions
+                                             move-snake
+                                             snake-reach-goal?
+                                             update-goal
+                                             check-game-over-collisions]))
+
+(def nano-seconds-delay 50000)
 (def max-width 40)
 (def max-height 20)
-
-(def key-left-arrow "1b5b44")
-(def key-down-arrow "1b5b42")
-(def key-right-arrow "1b5b43")
-(def key-up-arrow "1b5b41")
-
-(def directions
-  {key-left-arrow :left
-   key-down-arrow :down
-   key-right-arrow :right
-   key-up-arrow :up})
-
-(defn move-snake [snake next-direction]
-  (if (nil? next-direction)
-    (recur snake (snake :direction))
-    (let [updated-snake (case next-direction
-                          :left (update-in snake [:head :x] dec)
-                          :right (update-in snake [:head  :x] inc)
-                          :up (update-in snake [:head :y] dec)
-                          :down (update-in snake [:head :y] inc))]
-      (merge updated-snake {:direction next-direction}))))
 
 (defn render-snake [snake]
   (render (get-in snake [:head :x]) (get-in snake [:head :y]) "X")
@@ -33,25 +22,6 @@
 
 (defn render-goal [goal]
   (render (goal :x) (goal :y) "A"))
-
-(defn check-game-over-collisions-with-itself [snake] "TODO")
-(defn check-game-over-collisions-with-board [snake] "TODO")
-
-(defn check-game-over-collisions
-  [snake]
-  (check-game-over-collisions-with-itself snake)
-  (check-game-over-collisions-with-board snake))
-
-(defn generate-new-goal []
-  {:x (rand-int (- max-width 3))
-   :y (rand-int (- max-height 3))})
-
-(defn update-goal [snake goal]
-  (if (and
-       (= (get-in snake [:head :x]) (goal :x))
-       (= (get-in snake [:head :y]) (goal :y)))
-    (generate-new-goal)
-    goal))
 
 (defn debug-snake [snake]
   (render 0 (+ max-height 3) (php/str_repeat " " 100)) # clean the line
@@ -62,7 +32,7 @@
                 :tail []
                 :direction :right
                 :points 0}
-         goal (generate-new-goal)]
+         goal (generate-new-goal max-width max-height)]
     (php/usleep nano-seconds-delay)
 
     (render-board max-width max-height)
@@ -71,7 +41,8 @@
           in (php/bin2hex raw-in)
           next-direction (directions in)
           updated-snake (move-snake snake next-direction)
-          updated-goal (update-goal snake goal)]
+          new-goal? (snake-reach-goal? snake goal)
+          updated-goal (update-goal snake goal max-width max-height)]
 
       (check-game-over-collisions snake)
 

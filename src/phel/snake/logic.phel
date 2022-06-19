@@ -1,0 +1,44 @@
+(ns phel-cli-gui\snake\logic)
+
+(def- key-left-arrow "1b5b44")
+(def- key-down-arrow "1b5b42")
+(def- key-right-arrow "1b5b43")
+(def- key-up-arrow "1b5b41")
+
+(def directions
+  {key-left-arrow :left
+   key-down-arrow :down
+   key-right-arrow :right
+   key-up-arrow :up})
+
+(defn move-snake [snake next-direction]
+  (if (nil? next-direction)
+    (recur snake (snake :direction))
+    (let [updated-snake (case next-direction
+                          :left (update-in snake [:head :x] dec)
+                          :right (update-in snake [:head  :x] inc)
+                          :up (update-in snake [:head :y] dec)
+                          :down (update-in snake [:head :y] inc))]
+      (merge updated-snake {:direction next-direction}))))
+
+(defn- check-game-over-collisions-with-itself [snake] "TODO")
+(defn- check-game-over-collisions-with-board [snake] "TODO")
+
+(defn check-game-over-collisions
+  [snake]
+  (check-game-over-collisions-with-itself snake)
+  (check-game-over-collisions-with-board snake))
+
+(defn generate-new-goal [size-width size-height]
+  {:x (rand-int (- size-width 3))
+   :y (rand-int (- size-height 3))})
+
+(defn snake-reach-goal? [snake goal]
+  (and
+   (= (get-in snake [:head :x]) (goal :x))
+   (= (get-in snake [:head :y]) (goal :y))))
+
+(defn update-goal [snake goal size-width size-height]
+  (if (snake-reach-goal? snake goal)
+    (generate-new-goal size-width size-height)
+    goal))

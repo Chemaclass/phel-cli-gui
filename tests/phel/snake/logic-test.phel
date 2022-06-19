@@ -1,0 +1,13 @@
+(ns phel-cli-gui-tests\snake\logic-test
+  (:require phel-cli-gui\snake\logic :refer [snake-reach-goal? move-snake])
+  (:require phel\test :refer [deftest is]))
+
+(deftest test-move-snake
+  (let [snake {:head {:x 1 :y 1} :direction :up}]
+    (is (= {:head {:x 0 :y 1} :direction :left} (move-snake snake :left)))
+    (is (= {:head {:x 2 :y 1} :direction :right} (move-snake snake :right)))))
+
+(deftest test-snake-reach-goal?
+  (let [goal {:x 2 :y 2}]
+    (is (false? (snake-reach-goal? {:head {:x 1 :y 1}} goal)))
+    (is (true? (snake-reach-goal? {:head {:x 2 :y 2}} goal)))))
