@@ -22,9 +22,14 @@
 (defn render-goal [goal]
   (render (goal :x) (goal :y) "A"))
 
-(defn render-game-over []
-  (render (/ (board :width) 2) (/ (board :height) 2) "GAME OVER")
-  (php/die "So much fun!"))
+(defn render-game-over [snake]
+  (let [game-over-text "GAME OVER"
+        game-over-text-len (php/strlen game-over-text)
+        x-center (- (/ (board :width) 2) (/ game-over-text-len 2))
+        y-center (/ (board :height) 2)]
+    (render x-center y-center game-over-text)
+    (render x-center (inc y-center) (format "Points: %d" (snake :points)))
+    (php/die "So much fun!\n")))
 
 (defn debug-snake [snake]
   (render 0 (+ (board :height) 3) (php/str_repeat " " 100)) # clean the line
@@ -46,7 +51,7 @@
           new-goal? (snake-reach-goal? snake goal)
           updated-goal (update-goal snake goal board)]
 
-      (if (collision-with-board? snake board) (render-game-over))
+      (if (collision-with-board? snake board) (render-game-over snake))
 
       (debug-snake updated-snake)
 
