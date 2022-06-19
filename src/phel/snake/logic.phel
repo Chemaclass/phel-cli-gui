@@ -39,17 +39,18 @@
 
 (defn collision-with-board? [snake board]
   (or
-   (= 0 (get-in snake [:head :x]))
-   (= 0 (get-in snake [:head :y]))
+   (>= 1 (get-in snake [:head :x]))
+   (>= 0 (get-in snake [:head :y]))
    (= (board :width) (get-in snake [:head :x]))
-   (= (board :height) (get-in snake [:head :y]))))
+   (= (dec (board :height)) (get-in snake [:head :y]))))
 
 (defn generate-new-goal [{:width width :height height}]
-  (let [pos {:x (rand-int width)
-             :y (rand-int height)}]
-    (if (or (= (pos :x) 0)
-            (= (pos :y) width)
-            (= (pos :y) height))
+  (let [pos {:x (dec (rand-int width))
+             :y (dec (rand-int height))}]
+    (if (or (<= (pos :x) 1)
+            (>= (pos :x) (dec width))
+            (<= (pos :y) 1)
+            (>= (pos :y) (dec height)))
       (recur {:width width :height height})
       pos)))
 

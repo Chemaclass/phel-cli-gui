@@ -12,11 +12,17 @@
                                              collision-with-board?
                                              grow-snake]))
 
-(def nano-seconds-delay 100000)
-(def board {:width 45 :height 20})
+(def nano-seconds-delay 250000)
+(def board {:width 30 :height 10})
 (def goal-icon "A")
 (def snake-head-icon "X")
 (def snake-tail-icon "x")
+
+(defn sleeping-delay [snake]
+  (let [velocity (* (snake :points) 15000)
+        nano-sec (- nano-seconds-delay velocity)]
+    (render 0 (inc (board :height)) (format "Level: %d" (snake :points)))
+    (php/usleep nano-sec)))
 
 (defn render-snake [snake]
   (render (get-in snake [:head :x]) (get-in snake [:head :y]) snake-head-icon)
@@ -24,6 +30,7 @@
     (render (t :x) (t :y) snake-tail-icon)))
 
 (defn render-goal [goal]
+  (render 0 (+ 3 (board :height)) (str goal)) # for testing
   (render (goal :x) (goal :y) goal-icon))
 
 (defn render-game-over [snake]
@@ -36,17 +43,17 @@
     (php/die "So much fun!\n")))
 
 (defn debug-snake [snake]
-  (render 0 (+ (board :height) 3) (php/str_repeat " " 100)) # clean the line
-  (render 0 (+ (board :height) 3) (str (php/time) " - snake" snake)))
+  (render 0 (+ 2 (board :height)) (php/str_repeat " " 100)) # clean the line
+  (render 0 (+ 2 (board :height)) (str (php/time) " - snake" snake)))
 
 (defn main []
-  (loop [snake {:head {:x 1 :y 1}
+  (loop [snake {:head {:x 2 :y 2}
                 :tail []
                 :direction :right
                 :points 0}
          goal (generate-new-goal board)]
 
-    (php/usleep nano-seconds-delay)
+    (sleeping-delay snake)
     (render-board board)
 
     (let [in (php/bin2hex (php/fread input-stream 3))

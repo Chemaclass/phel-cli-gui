@@ -35,10 +35,9 @@
     (is (true? (snake-reach-goal? {:head {:x 2 :y 2}} goal)))))
 
 (deftest test-collision-with-board?
-  (let [limit 10
-        board {:width limit :height limit}]
+  (let [board {:width 10 :height 10}]
     (is (false? (collision-with-board? {:head {:x 5 :y 5}} board)))
     (is (true? (collision-with-board? {:head {:x 5 :y 0}} board)) "collision on top")
-    (is (true? (collision-with-board? {:head {:x 5 :y limit}} board)) "collision on right")
-    (is (true? (collision-with-board? {:head {:x limit :y 5}} board)) "collision on bottom")
+    (is (true? (collision-with-board? {:head {:x 5 :y 9}} board)) "collision on right")
+    (is (true? (collision-with-board? {:head {:x 10 :y 5}} board)) "collision on bottom")
     (is (true? (collision-with-board? {:head {:x 0 :y 5}} board)) "collision on left")))
