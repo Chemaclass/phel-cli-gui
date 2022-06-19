@@ -5,12 +5,29 @@
   (:require phel\test :refer [deftest is]))
 
 (deftest test-move-snake
-  (let [snake {:head {:x 1 :y 1} :direction :up}]
-    (is (= {:head {:x 1 :y 0} :direction :up} (move-snake snake nil)))
-    (is (= {:head {:x 0 :y 1} :direction :left} (move-snake snake :left)))
-    (is (= {:head {:x 2 :y 1} :direction :right} (move-snake snake :right)))
-    (is (= {:head {:x 1 :y 0} :direction :up} (move-snake snake :up)))
-    (is (= {:head {:x 1 :y 2} :direction :down} (move-snake snake :down)))))
+  (let [snake {:head {:x 5 :y 5}
+               :direction :right
+               :tail [{:x 3 :y 5} {:x 4 :y 5}]}]
+    (is (= {:head {:x 6 :y 5}
+            :direction :right
+            :tail [{:x 4 :y 5} {:x 5 :y 5}]}
+           (move-snake snake nil)) "Keep the old direction if nil")
+    (is (= {:head {:x 4 :y 5}
+            :direction :left
+            :tail [{:x 4 :y 5} {:x 5 :y 5}]}
+           (move-snake snake :left)))
+    (is (= {:head {:x 6 :y 5}
+            :direction :right
+            :tail [{:x 4 :y 5} {:x 5 :y 5}]}
+           (move-snake snake :right)))
+    (is (= {:head {:x 5 :y 4}
+            :direction :up
+            :tail [{:x 4 :y 5} {:x 5 :y 5}]}
+           (move-snake snake :up)))
+    (is (= {:head {:x 5 :y 6}
+            :direction :down
+            :tail [{:x 4 :y 5} {:x 5 :y 5}]}
+           (move-snake snake :down)))))
 
 (deftest test-snake-reach-goal?
   (let [goal {:x 2 :y 2}]

@@ -17,12 +17,16 @@
 (defn move-snake [snake next-direction]
   (if (nil? next-direction)
     (recur snake (snake :direction))
-    (let [updated-snake (case next-direction
-                          :left (update-in snake [:head :x] dec)
-                          :right (update-in snake [:head  :x] inc)
-                          :up (update-in snake [:head :y] dec)
-                          :down (update-in snake [:head :y] inc))]
-      (merge updated-snake {:direction next-direction}))))
+    (let [sn1 (case next-direction
+                :left (update-in snake [:head :x] dec)
+                :right (update-in snake [:head :x] inc)
+                :up (update-in snake [:head :y] dec)
+                :down (update-in snake [:head :y] inc))
+          # remove the last tail position
+          sn2 (update sn1 :tail |(slice $ 1))
+          # add head to the tail
+          sn3 (update sn2 :tail |(push $ (snake :head)))]
+      (merge sn3 {:direction next-direction}))))
 
 (defn collision-with-board? [snake board]
   (or

@@ -11,8 +11,8 @@
                                              update-goal
                                              collision-with-board?]))
 
-(def nano-seconds-delay 50000)
-(def board {:width 40 :height 20})
+(def nano-seconds-delay 100000)
+(def board {:width 45 :height 20})
 
 (defn render-snake [snake]
   (render (get-in snake [:head :x]) (get-in snake [:head :y]) "X")
