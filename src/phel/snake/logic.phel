@@ -25,8 +25,11 @@
       (merge updated-snake {:direction next-direction}))))
 
 (defn collision-with-board? [snake board]
-  "TODO"
-  true)
+  (or
+   (= 0 (get-in snake [:head :x]))
+   (= 0 (get-in snake [:head :y]))
+   (= (board :width) (get-in snake [:head :x]))
+   (= (board :height) (get-in snake [:head :y]))))
 
 (defn generate-new-goal [{:width width :height height}]
   {:x (rand-int (- width 3))
