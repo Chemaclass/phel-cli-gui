@@ -4,36 +4,38 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6ae62fc6237f350db0e3ce7cd7a1839c",
+    "content-hash": "8c30d1e961ddb19f3beffa9fbde98bcb",
     "packages": [
         {
             "name": "gacela-project/gacela",
-            "version": "0.10.0",
+            "version": "0.17.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/gacela-project/gacela.git",
-                "reference": "ecb27c8243dad3e0ea7fae5ed1c9322a2904e792"
+                "reference": "2a44c6aa7c5b7af93bd0c2a854eb895bf3e5b6a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/gacela-project/gacela/zipball/ecb27c8243dad3e0ea7fae5ed1c9322a2904e792",
-                "reference": "ecb27c8243dad3e0ea7fae5ed1c9322a2904e792",
+                "url": "https://api.github.com/repos/gacela-project/gacela/zipball/2a44c6aa7c5b7af93bd0c2a854eb895bf3e5b6a8",
+                "reference": "2a44c6aa7c5b7af93bd0c2a854eb895bf3e5b6a8",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
                 "php": ">=7.4",
-                "symfony/console": "^5.3"
+                "symfony/console": "^5.4"
             },
             "require-dev": {
-                "friendsofphp/php-cs-fixer": "^3.1",
-                "phpbench/phpbench": "^1.1",
-                "phpstan/phpstan": "^1.0.x-dev",
+                "friendsofphp/php-cs-fixer": "^3.8",
+                "phpbench/phpbench": "^1.2",
+                "phpmetrics/phpmetrics": "^2.8",
+                "phpstan/phpstan": "^1.5",
                 "phpunit/phpunit": "^9.5",
-                "symfony/var-dumper": "^5.3",
-                "vimeo/psalm": "^4.10"
+                "symfony/var-dumper": "^5.4",
+                "vimeo/psalm": "^4.22"
             },
             "suggest": {
+                "gacela-project/gacela-env-config-reader": "Allows to read .env config files",
                 "gacela-project/gacela-yaml-config-reader": "Allows to read yml/yaml config files"
             },
             "bin": [
@@ -60,6 +62,7 @@
                 }
             ],
             "description": "Gacela Framework",
+            "homepage": "https://gacela-project.com/",
             "keywords": [
                 "kernel",
                 "modular",
@@ -67,39 +70,40 @@
             ],
             "support": {
                 "issues": "https://github.com/gacela-project/gacela/issues",
-                "source": "https://github.com/gacela-project/gacela/tree/0.10.0"
+                "source": "https://github.com/gacela-project/gacela/tree/0.17.2"
             },
-            "time": "2021-10-04T09:03:50+00:00"
+            "time": "2022-05-02T21:57:27+00:00"
         },
         {
             "name": "phel-lang/phel-lang",
-            "version": "v0.5.0",
+            "version": "v0.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phel-lang/phel-lang.git",
-                "reference": "87735986ed001cbd48d3391e3d0f71fc35ed4c86"
+                "reference": "5e91efd5f95444e91727465387c5da083f816de4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/87735986ed001cbd48d3391e3d0f71fc35ed4c86",
-                "reference": "87735986ed001cbd48d3391e3d0f71fc35ed4c86",
+                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/5e91efd5f95444e91727465387c5da083f816de4",
+                "reference": "5e91efd5f95444e91727465387c5da083f816de4",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "gacela-project/gacela": "^0.10",
-                "php": ">=7.4",
+                "gacela-project/gacela": "^0.17",
+                "php": ">=8.0",
                 "phpunit/php-timer": "^5.0",
                 "symfony/console": "^5.4"
             },
             "require-dev": {
                 "ext-readline": "*",
-                "friendsofphp/php-cs-fixer": "^3.3",
+                "friendsofphp/php-cs-fixer": "^3.8",
                 "phpbench/phpbench": "^1.2",
-                "phpmetrics/phpmetrics": "^2.7",
+                "phpmetrics/phpmetrics": "^2.8",
+                "phpstan/phpstan": "^1.6",
                 "phpunit/phpunit": "^9.5",
                 "symfony/var-dumper": "^5.4",
-                "vimeo/psalm": "^4.10"
+                "vimeo/psalm": "^4.22"
             },
             "bin": [
                 "phel"
@@ -130,9 +134,9 @@
             ],
             "support": {
                 "issues": "https://github.com/phel-lang/phel-lang/issues",
-                "source": "https://github.com/phel-lang/phel-lang/tree/v0.5.0"
+                "source": "https://github.com/phel-lang/phel-lang/tree/v0.7.0"
             },
-            "time": "2021-12-17T19:38:12+00:00"
+            "time": "2022-05-04T09:36:09+00:00"
         },
         {
             "name": "phpunit/php-timer",
@@ -1678,8 +1682,6 @@
     "prefer-lowest": false,
     "platform": {
         "php": "^8.0",
-        "ext-ctype": "*",
-        "ext-iconv": "*",
         "ext-readline": "*"
     },
     "platform-dev": [],
