@@ -6,15 +6,19 @@ It uses the Cursor from the Symfony Command module.
 ### Example
 
 ```phel
-(ns phel-cli-gui\example
-  (:require phel-cli-gui\terminal-gui :refer [clear-screen board render]))
+(ns your-namespace\example
+  (:require phel-cli-gui\terminal-gui :refer [clear-screen render-board render]))
 
 (clear-screen)
-(board 40 20)
+(render-board 40 20)
 
 (render 1 1 "1,1")
 (render 2 2 "2,2")
 (render 3 3 "3,3")
 ```
 
-## WIP
+### Examples
+
+You can see some real examples using this library:
+
+- https://github.com/Chemaclass/phel-snake

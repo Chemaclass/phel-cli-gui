@@ -4,12 +4,23 @@
 (def input-stream php/STDIN)
 (def gui (php/new TerminalGui input-stream))
 
-(defn clear-screen []
+(defn read-hex
+  "Reads the input stream and converts it to hexadecimal."
+  [length]
+  (php/bin2hex (php/fread input-stream length)))
+
+(defn clear-screen
+  "Clears the entire screen."
+  []
   (php/-> gui (clearScreen)))
 
-(defn render-board [{:width width :height height}]
+(defn render-board
+  "Renders the borders of a board."
+  [{:width width :height height}]
   (php/-> gui (renderBoard width height)))
 
-(defn render [column row text]
+(defn render
+  "Render any text to a concrete position x,y in the terminal."
+  [column row text]
   (php/-> gui (render column row text)))
 
