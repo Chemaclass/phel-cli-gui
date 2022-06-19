@@ -58,11 +58,10 @@
       (render-snake updated-snake)
       (render-goal updated-goal)
 
-      (recur
-       (if (id goal updated-goal)
-         updated-snake
-         (update-in updated-snake [:points] inc))
-       updated-goal))))
+      (let [sn (if (id goal updated-goal)
+                 updated-snake
+                 (update-in updated-snake [:points] inc))]
+        (recur sn updated-goal)))))
 
 (clear-screen)
 (main)

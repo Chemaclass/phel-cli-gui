@@ -36,8 +36,13 @@
    (= (board :height) (get-in snake [:head :y]))))
 
 (defn generate-new-goal [{:width width :height height}]
-  {:x (rand-int (- width 3))
-   :y (rand-int (- height 3))})
+  (let [pos {:x (rand-int width)
+             :y (rand-int height)}]
+    (if (or (= (pos :x) 0)
+            (= (pos :y) width)
+            (= (pos :y) height))
+      (recur {:width width :height height})
+      pos)))
 
 (defn snake-reach-goal? [snake goal]
   (and
