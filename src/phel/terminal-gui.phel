@@ -4,10 +4,12 @@
 (def input-stream php/STDIN)
 (def gui (php/new TerminalGui input-stream))
 
-(defn read-hex
-  "Reads the input stream and converts it to hexadecimal."
+(defn read-input
+  "Reads the input stream and returns it in different formats."
   [length]
-  (php/bin2hex (php/fread input-stream length)))
+  (let [raw (php/fread input-stream length)
+        hex (php/bin2hex raw)]
+    {:raw raw :hex hex}))
 
 (defn clear-screen
   "Clears the entire screen."
