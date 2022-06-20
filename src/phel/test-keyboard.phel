@@ -1,20 +1,16 @@
 (ns phel-cli-gui\test-keyboard
-  (:use \PhelCliGui\TerminalGui)
-  (:require phel-cli-gui\terminal-gui :refer [clear-screen
-                                              read-input
-                                              render]))
-(defn sleep-delay []
-  (php/usleep 1000))
+  (:require phel-cli-gui\terminal-gui :refer [read-input render]))
 
 (defn render-input [{:raw raw :hex hex}]
   (if (> (php/strlen hex) 0)
     (println (format "# Raw input: `%s`, hex: `%s`" raw hex))))
 
-(defn main []
-  (clear-screen)
+(defn main
+  "Display the key and its hexadecimal value on the fly"
+  []
   (println "Type something...")
   (loop []
-    (sleep-delay)
+    (php/usleep 1000)
     (let [input (read-input 3)]
       (render-input input)
       (recur))))

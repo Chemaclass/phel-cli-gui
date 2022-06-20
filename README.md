@@ -5,16 +5,30 @@ It uses the Cursor from the Symfony Command module.
 
 ### Example
 
+This example will read the input from the keyboard and display the char and its hexadecimal value on the terminal.
+You can run it locally using: `vendor/bin/phel run src/phel/test-keyboard.phel`
+
+Source:
+
 ```phel
-(ns your-namespace\example
-  (:require phel-cli-gui\terminal-gui :refer [clear-screen render-board render]))
+(ns phel-cli-gui\test-keyboard
+  (:require phel-cli-gui\terminal-gui :refer [read-input render]))
 
-(clear-screen)
-(render-board 40 20)
+(defn render-input [{:raw raw :hex hex}]
+  (if (> (php/strlen hex) 0)
+    (println (format "# Raw input: `%s`, hex: `%s`" raw hex))))
 
-(render 1 1 "1,1")
-(render 2 2 "2,2")
-(render 3 3 "3,3")
+(defn main
+  "Display the key and its hexadecimal value on the fly"
+  []
+  (println "Type something...")
+  (loop []
+    (php/usleep 1000)
+    (let [input (read-input 3)]
+      (render-input input)
+      (recur))))
+
+(main)
 ```
 
 ### Examples
