@@ -1,0 +1,22 @@
+(ns phel-cli-gui\test-keyboard
+  (:use \PhelCliGui\TerminalGui)
+  (:require phel-cli-gui\terminal-gui :refer [clear-screen
+                                              read-hex
+                                              render]))
+(defn sleep-delay []
+  (php/usleep 1000))
+
+(defn render-input [input]
+  (if (> (php/strlen input) 0)
+    (println (format "Input: %s" input))))
+
+(defn main []
+  (clear-screen)
+  (println "Type something...")
+  (loop []
+    (sleep-delay)
+    (let [input (read-hex 3)]
+      (render-input input)
+      (recur))))
+
+(main)
