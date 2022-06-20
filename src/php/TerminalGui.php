@@ -1,16 +1,16 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace PhelCliGui;
 
 use Symfony\Component\Console\Cursor;
-use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 final class TerminalGui
 {
-    private BufferedOutput $output;
+    private ConsoleOutput $output;
 
     private Cursor $cursor;
     private int $width = 0;
@@ -21,27 +21,11 @@ final class TerminalGui
 
     private string|null|false $sttyMode = null;
 
-    public function __construct($inputStream = STDIN, ?OutputFormatter $formatter = null)
+    public function __construct($inputStream = STDIN)
     {
         $this->inputStream = $inputStream;
-
-        $this->output = new BufferedOutput();
-        $this->output->setFormatter($formatter ?? new OutputFormatter());
-
+        $this->output = new ConsoleOutput();
         $this->cursor = new Cursor($this->output);
-        $this->execute();
-    }
-
-    public function __destruct()
-    {
-        $this->cursor->show();
-
-        stream_set_blocking($this->inputStream, true);
-        shell_exec(sprintf('stty %s', $this->sttyMode));
-    }
-
-    public function execute(): void
-    {
         $this->cursor->hide();
 
         stream_set_blocking($this->inputStream, false);
@@ -49,6 +33,22 @@ final class TerminalGui
         shell_exec('stty -icanon -echo');
 
         $this->cursor->moveToPosition(0, 0);
+    }
+
+    public function __destruct()
+    {
+        $this->cursor->show();
+        stream_set_blocking($this->inputStream, true);
+        if ($this->sttyMode !== null) {
+            shell_exec(sprintf('stty %s', $this->sttyMode));
+        }
+    }
+
+    public function addOutputFormatter(string $name, OutputFormatterStyleInterface $style): self
+    {
+        $this->output->getFormatter()->setStyle($name, $style);
+
+        return $this;
     }
 
     public function renderBoard(int $width, int $height): void
@@ -72,7 +72,7 @@ final class TerminalGui
         $this->cursor->clearScreen();
     }
 
-    public function render(int $column, int $row, string $text): void
+    public function render(int $column, int $row, string $text, ?string $style = ''): void
     {
         if ($column >= $this->width) {
             $this->width = $column;
@@ -81,14 +81,17 @@ final class TerminalGui
             $this->height = $row;
         }
         $this->cursor->moveToPosition($column, $row);
-        $this->write($text);
+        $this->write($text, $style);
         $this->cursor->moveToPosition(0, $this->height);
         $this->write(PHP_EOL);
     }
 
-    private function write(string $text): void
+    private function write(string $text, ?string $style = ''): void
     {
-        $this->output->write($text);
-        echo $this->output->fetch();
+        if (empty($style)) {
+            $this->output->write($text);
+        } else {
+            $this->output->write("<$style>$text</$style>");
+        }
     }
 }

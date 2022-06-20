@@ -1,8 +1,19 @@
 (ns phel-cli-gui\terminal-gui
-  (:use \PhelCliGui\TerminalGui))
+  (:use \PhelCliGui\TerminalGui)
+  (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle))
 
 (def input-stream php/STDIN)
 (def gui (php/new TerminalGui input-stream))
+
+(defn add-output-formatter [{:style-name style-name
+                             :foreground foreground
+                             :background background
+                             :options options}]
+  (php/-> gui (addOutputFormatter style-name
+                                  (php/new OutputFormatterStyle
+                                           foreground
+                                           background
+                                           (to-php-array (or options []))))))
 
 (defn read-input
   "Reads the input stream and returns it in different formats."
@@ -23,6 +34,5 @@
 
 (defn render
   "Render any text to a concrete position x,y in the terminal."
-  [column row text]
-  (php/-> gui (render column row text)))
-
+  [column row text & [style]]
+  (php/-> gui (render column row text (or style ""))))
