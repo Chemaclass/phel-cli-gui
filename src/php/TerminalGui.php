@@ -13,8 +13,8 @@ final class TerminalGui
     private ConsoleOutput $output;
 
     private Cursor $cursor;
-    private int $width = 0;
-    private int $height = 0;
+    private int $maxWidth = 0;
+    private int $maxHeight = 0;
 
     /** @var resource */
     private $inputStream;
@@ -53,8 +53,8 @@ final class TerminalGui
 
     public function renderBoard(int $width, int $height): void
     {
-        $this->width = $width;
-        $this->height = $height;
+        $this->maxWidth = $width;
+        $this->maxHeight = $height;
 
         $borderLine = implode('', array_fill(0, $width - 2, '─'));
         $emptyLine = implode('', array_fill(0, $width - 2, ' '));
@@ -74,15 +74,15 @@ final class TerminalGui
 
     public function render(int $column, int $row, string $text, ?string $style = ''): void
     {
-        if ($column >= $this->width) {
-            $this->width = $column;
+        if ($column >= $this->maxWidth) {
+            $this->maxWidth = $column;
         }
-        if ($row > $this->height) {
-            $this->height = $row;
+        if ($row > $this->maxHeight) {
+            $this->maxHeight = $row;
         }
         $this->cursor->moveToPosition($column, $row);
         $this->write($text, $style);
-        $this->cursor->moveToPosition(0, $this->height);
+        $this->cursor->moveToPosition($this->maxWidth, $this->maxHeight);
         $this->write(PHP_EOL);
     }
 
