@@ -32,6 +32,11 @@
   []
   (php/-> gui (clearOutput)))
 
+(defn clear-line
+  "Clears all the output from the current line."
+  [line]
+  (php/-> gui (clearLine line)))
+
 (defn render-board
   "Renders the borders of a board."
   [{:width width :height height}]

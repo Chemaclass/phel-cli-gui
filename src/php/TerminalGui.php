@@ -69,6 +69,12 @@ final class TerminalGui
         $this->cursor->clearScreen();
     }
 
+    public function clearLine(int $line): void
+    {
+        $this->cursor->moveToPosition(0, $line);
+        $this->cursor->clearLine();
+    }
+
     public function clearOutput(): void
     {
         $this->cursor->clearOutput();
