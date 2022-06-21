@@ -27,6 +27,11 @@
   []
   (php/-> gui (clearScreen)))
 
+(defn clear-output
+  "Clears all the output from the cursors' current position to the end of the screen."
+  []
+  (php/-> gui (clearOutput)))
+
 (defn render-board
   "Renders the borders of a board."
   [{:width width :height height}]

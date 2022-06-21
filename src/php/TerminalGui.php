@@ -10,15 +10,13 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 
 final class TerminalGui
 {
-    private ConsoleOutput $output;
-
-    private Cursor $cursor;
-    private int $maxWidth = 0;
-    private int $maxHeight = 0;
-
     /** @var resource */
     private $inputStream;
 
+    private ConsoleOutput $output;
+    private Cursor $cursor;
+    private int $maxWidth = 0;
+    private int $maxHeight = 0;
     private string|null|false $sttyMode = null;
 
     public function __construct($inputStream = STDIN)
@@ -27,12 +25,11 @@ final class TerminalGui
         $this->output = new ConsoleOutput();
         $this->cursor = new Cursor($this->output);
         $this->cursor->hide();
+        $this->cursor->moveToPosition(0, 0);
 
         stream_set_blocking($this->inputStream, false);
         $this->sttyMode = shell_exec('stty -g');
         shell_exec('stty -icanon -echo');
-
-        $this->cursor->moveToPosition(0, 0);
     }
 
     public function __destruct()
@@ -56,12 +53,12 @@ final class TerminalGui
         $this->maxWidth = $width;
         $this->maxHeight = $height;
 
-        $borderLine = implode('', array_fill(0, $width - 2, '─'));
+        $borderLine = implode('', array_fill(0, $width - 2, '-'));
         $emptyLine = implode('', array_fill(0, $width - 2, ' '));
 
-        $out = "┌{$borderLine}┐" . PHP_EOL;
-        $out .= str_repeat("│{$emptyLine}│" . PHP_EOL, $height - 2);
-        $out .= "└{$borderLine}┘" . PHP_EOL;
+        $out = "+$borderLine+" . PHP_EOL;
+        $out .= str_repeat("|$emptyLine|" . PHP_EOL, $height - 2);
+        $out .= "+$borderLine+" . PHP_EOL;
 
         $this->cursor->moveToPosition(0, 0);
         $this->write($out);
@@ -70,6 +67,11 @@ final class TerminalGui
     public function clearScreen(): void
     {
         $this->cursor->clearScreen();
+    }
+
+    public function clearOutput(): void
+    {
+        $this->cursor->clearOutput();
     }
 
     public function render(int $column, int $row, string $text, ?string $style = ''): void
