@@ -1,4 +1,6 @@
-.idea
-.phel-repl-history
+.idea/
 src/PhelGenerated/
 vendor/
+
+.phel-repl-history
+*.cache

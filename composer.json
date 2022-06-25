@@ -1,26 +1,26 @@
 {
-  "name": "chemaclass/phel-cli-gui",
-  "keywords": [
-    "phel",
-    "lisp",
-    "functional",
-    "language"
-  ],
-  "homepage": "https://phel-lang.org/",
-  "license": "MIT",
-  "require": {
-    "php": "^8.0",
-    "ext-readline": "*",
-    "phel-lang/phel-lang": "^0.7",
-    "symfony/console": "^5.1 || ^6.0"
-  },
-  "require-dev": {
-    "roave/security-advisories": "dev-latest",
-    "symfony/var-dumper": "5.4.x-dev"
-  },
-  "autoload": {
-    "psr-4": {
-      "PhelCliGui\\": "src/php/"
+    "name": "chemaclass/phel-cli-gui",
+    "keywords": [
+        "phel",
+        "lisp",
+        "functional",
+        "language"
+    ],
+    "homepage": "https://phel-lang.org/",
+    "license": "MIT",
+    "require": {
+        "php": "^8.0",
+        "ext-readline": "*",
+        "phel-lang/phel-lang": "dev-master",
+        "symfony/console": "^5.1 || ^6.0"
+    },
+    "require-dev": {
+        "roave/security-advisories": "dev-latest",
+        "symfony/var-dumper": "5.4.x-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhelCliGui\\": "src/php/"
+        }
     }
-  }
 }
