@@ -15,4 +15,7 @@
       (render-input input)
       (recur))))
 
-(main)
+# This way we ensure the main logic will run only if we pass the main argument to the script:
+# vendor/bin/phel run src/phel/test-keyboard.phel main
+(if (= (get argv 3) "main")
+  (main))
