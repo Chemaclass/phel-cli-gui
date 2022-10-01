@@ -1,7 +1,9 @@
 .idea/
+.gacela/
 src/PhelGenerated/
 vendor/
 data/
 
-.phel-repl-history
 *.cache
+.phel-repl-history
+phel-config-local.php
