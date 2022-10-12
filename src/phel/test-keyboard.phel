@@ -16,6 +16,6 @@
       (recur))))
 
 # This way we ensure the main logic will run only if we pass the main argument to the script:
-# vendor/bin/phel run src/phel/test-keyboard.phel main
-(if (= (get argv 3) "main")
+# vendor/bin/phel run src/phel/test-keyboard.phel
+(if (= __MAIN_NS__ "phel-cli-gui\\test-keyboard")
   (main))
