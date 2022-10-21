@@ -15,7 +15,6 @@
       (render-input input)
       (recur))))
 
-# This way we ensure the main logic will run only if we pass the main argument to the script:
 # vendor/bin/phel run src/phel/test-keyboard.phel
-(if (= __MAIN_NS__ "phel-cli-gui\\test-keyboard")
+(when-not *compile-mode*
   (main))
