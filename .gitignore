@@ -8,3 +8,4 @@ out/
 *.cache
 .phel-repl-history
 phel-config-local.php
+gacela-local.php
