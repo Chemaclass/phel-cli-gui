@@ -1,0 +1,6 @@
+(ns phel-cli-gui-test\terminal-gui-test
+  (:require phel-cli-gui\terminal-gui :as gui)
+  (:require phel\test :refer [deftest is]))
+
+(deftest test-nothing
+  (is (= 1 1)))

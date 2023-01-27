@@ -1,35 +1,42 @@
 <?php
 
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace PhelCliGui;
 
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 
 final class TerminalGui
 {
-    /** @var resource */
-    private $inputStream;
-
-    private ConsoleOutput $output;
-    private Cursor $cursor;
     private int $maxWidth = 0;
     private int $maxHeight = 0;
-    private string|null|false $sttyMode = null;
 
-    public function __construct($inputStream = STDIN)
+    public static function withStream($inputStream = STDIN): self
     {
-        $this->inputStream = $inputStream;
-        $this->output = new ConsoleOutput();
-        $this->cursor = new Cursor($this->output);
-        $this->cursor->hide();
-        $this->cursor->moveToPosition(0, 0);
+        $output = new ConsoleOutput();
+        $cursor = new Cursor($output);
+        $cursor->hide();
+        $cursor->moveToPosition(0, 0);
 
-        stream_set_blocking($this->inputStream, false);
-        $this->sttyMode = shell_exec('stty -g');
+        stream_set_blocking($inputStream, false);
+        $sttyMode = shell_exec('stty -g');
         shell_exec('stty -icanon -echo');
+
+        return new self($inputStream, $output, $cursor, $sttyMode);
+    }
+
+    /**
+     * @param resource $inputStream
+     */
+    private function __construct(
+        private $inputStream,
+        private ConsoleOutputInterface $output,
+        private Cursor $cursor,
+        private string|null|false $sttyMode
+    ) {
     }
 
     public function __destruct()

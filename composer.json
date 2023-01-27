@@ -28,5 +28,9 @@
         "platform": {
             "php": "8.0.2"
         }
+    },
+    "scripts": {
+        "compile": "vendor/bin/phel compile --no-cache",
+        "test": "vendor/bin/phel test"
     }
 }

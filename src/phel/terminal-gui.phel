@@ -3,7 +3,7 @@
   (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle))
 
 (def input-stream php/STDIN)
-(def gui (php/new TerminalGui input-stream))
+(def gui (php/:: TerminalGui (withStream input-stream)))
 
 (defn add-output-formatter [{:style-name style-name
                              :foreground foreground
