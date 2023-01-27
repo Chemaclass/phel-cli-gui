@@ -33,16 +33,16 @@
   (php/-> gui (clearOutput)))
 
 (defn clear-line
-  "Clears all the output from the current line."
+  "Clears the output from the line."
   [line]
   (php/-> gui (clearLine line)))
 
 (defn render-board
   "Renders the borders of a board."
-  [{:width width :height height}]
-  (php/-> gui (renderBoard width height)))
+  [{:width w :height h}]
+  (php/-> gui (renderBoard w h)))
 
 (defn render
-  "Render any text to a concrete position x,y in the terminal."
-  [column row text & [style]]
-  (php/-> gui (render column row text (or style ""))))
+  "Render any text to a concrete position (x,y) in the terminal."
+  [x y text & [style]]
+  (php/-> gui (render x y text (or style ""))))

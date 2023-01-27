@@ -3,6 +3,15 @@
 This library provides you with some [Phel](https://phel-lang.org/) functions to render in the terminal.
 It uses the Cursor from the Symfony Command module.
 
+### Functions
+
+- `(read-input [length])`: reads the input stream and returns it in different formats; `:raw` and `:hex`.
+- `(clear-screen)`: clears the entire screen.
+- `(clear-output)`: clears all the output from the cursors' current position to the end of the screen.
+- `(clear-line [line])`: clears the output from the line.
+- `(render-board [{:width w :height h}])`: renders the borders of a board.
+- `(render [x y text & [style]])`: render any text to a concrete position (x,y) in the terminal.
+
 ### Example
 
 This example will read the input from the keyboard and display the char and its hexadecimal value on the terminal.
@@ -31,7 +40,7 @@ Source:
 (main)
 ```
 
-### Examples
+#### Examples
 
 You can see some real examples using this library:
 
