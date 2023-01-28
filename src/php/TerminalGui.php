@@ -55,17 +55,27 @@ final class TerminalGui
         return $this;
     }
 
-    public function renderBoard(int $width, int $height): void
-    {
+    public function renderBoard(
+        int $width,
+        int $height,
+        ?BorderChar $borderChar = null
+    ): void {
+        if ($borderChar === null) {
+            $borderChar = new BorderChar();
+        }
         $this->maxWidth = $width;
         $this->maxHeight = $height;
 
-        $borderLine = implode('', array_fill(0, $width - 2, '-'));
+        $horizontalLine = implode('', array_fill(0, $width - 2, $borderChar->horizontal()));
         $emptyLine = implode('', array_fill(0, $width - 2, ' '));
+        $horizontalBorderLine = sprintf("%s%s%s\n", $borderChar->corner(), $horizontalLine, $borderChar->corner());
 
-        $out = "+$borderLine+" . PHP_EOL;
-        $out .= str_repeat("|$emptyLine|" . PHP_EOL, $height - 2);
-        $out .= "+$borderLine+" . PHP_EOL;
+        $out = $horizontalBorderLine;
+        $out .= str_repeat(
+            sprintf("%s%s%s\n", $borderChar->vertical(), $emptyLine, $borderChar->vertical()),
+            $height - 2
+        );
+        $out .= $horizontalBorderLine;
 
         $this->cursor->moveToPosition(0, 0);
         $this->write($out);
