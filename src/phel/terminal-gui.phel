@@ -1,5 +1,6 @@
 (ns phel-cli-gui\terminal-gui
   (:use \PhelCliGui\TerminalGui)
+  (:use \PhelCliGui\BorderStyle)
   (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle))
 
 (def input-stream php/STDIN)
@@ -37,10 +38,14 @@
   [line]
   (php/-> gui (clearLine line)))
 
+(defn- make-border-style
+  [{:horizontal ch :vertical cv :corner cc}]
+  (php/new BorderStyle ch cv cc))
+
 (defn render-board
   "Renders the borders of a board."
-  [{:width w :height h}]
-  (php/-> gui (renderBoard w h)))
+  [{:width w :height h} & [border-style]]
+  (php/-> gui (renderBoard w h (make-border-style border-style))))
 
 (defn render
   "Render any text to a concrete position (x,y) in the terminal."

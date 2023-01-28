@@ -58,21 +58,21 @@ final class TerminalGui
     public function renderBoard(
         int $width,
         int $height,
-        ?BorderChar $borderChar = null
+        ?BorderStyle $style = null
     ): void {
-        if ($borderChar === null) {
-            $borderChar = new BorderChar();
+        if ($style === null) {
+            $style = new BorderStyle();
         }
         $this->maxWidth = $width;
         $this->maxHeight = $height;
 
-        $horizontalLine = implode('', array_fill(0, $width - 2, $borderChar->horizontal()));
+        $horizontalLine = implode('', array_fill(0, $width - 2, $style->horizontal()));
         $emptyLine = implode('', array_fill(0, $width - 2, ' '));
-        $horizontalBorderLine = sprintf("%s%s%s\n", $borderChar->corner(), $horizontalLine, $borderChar->corner());
+        $horizontalBorderLine = sprintf("%s%s%s\n", $style->corner(), $horizontalLine, $style->corner());
 
         $out = $horizontalBorderLine;
         $out .= str_repeat(
-            sprintf("%s%s%s\n", $borderChar->vertical(), $emptyLine, $borderChar->vertical()),
+            sprintf("%s%s%s\n", $style->vertical(), $emptyLine, $style->vertical()),
             $height - 2
         );
         $out .= $horizontalBorderLine;
