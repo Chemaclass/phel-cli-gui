@@ -40,7 +40,7 @@
 
 (defn- make-border-style
   [{:horizontal ch :vertical cv :corner cc}]
-  (php/new BorderStyle ch cv cc))
+  (php/:: BorderStyle (withChars ch cv cc)))
 
 (defn render-board
   "Renders the borders of a board."

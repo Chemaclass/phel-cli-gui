@@ -61,7 +61,7 @@ final class TerminalGui
         ?BorderStyle $style = null
     ): void {
         if ($style === null) {
-            $style = new BorderStyle();
+            $style = BorderStyle::withChars();
         }
         $this->maxWidth = $width;
         $this->maxHeight = $height;

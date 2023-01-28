@@ -31,6 +31,7 @@
     },
     "scripts": {
         "compile": "vendor/bin/phel compile --no-cache",
-        "test": "vendor/bin/phel test"
+        "test": "vendor/bin/phel test",
+        "format": "vendor/bin/phel format src tests"
     }
 }
