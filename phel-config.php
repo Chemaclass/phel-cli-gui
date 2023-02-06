@@ -11,4 +11,7 @@ return [
         'namespace-prefix' => 'PhelGenerated',
         'target-directory' => 'src/PhelGenerated',
     ],
+    'ignore-when-building' => [
+        'test-keyboard.phel',
+    ],
 ];
