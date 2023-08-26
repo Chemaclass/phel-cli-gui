@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use Phel\Config\PhelConfig;
 use Phel\Config\PhelExportConfig;
+use Phel\Config\PhelOutConfig;
 
 return (new PhelConfig())
     ->setSrcDirs(['src/phel/'])
     ->setTestDirs(['tests/phel/'])
     ->setVendorDir('vendor')
-    ->setOutDir('out')
+    ->setOut((new PhelOutConfig())
+        ->setDestDir('out'))
     ->setExport(
         (new PhelExportConfig())
             ->setDirectories(['src/modules'])

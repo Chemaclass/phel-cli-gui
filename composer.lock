@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c8353b4d351a99641a737e1f498927d9",
+    "content-hash": "2b4071cbea4157f0871daa2f3415b033",
     "packages": [
         {
             "name": "gacela-project/container",
@@ -158,20 +158,20 @@
         },
         {
             "name": "phel-lang/phel-lang",
-            "version": "v0.10.1",
+            "version": "v0.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phel-lang/phel-lang.git",
-                "reference": "2d7889058b32358035dcf8ec14aba2f699d1a917"
+                "reference": "f530dbb4c73352862490aa8f6865dd9cc9d352b7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/2d7889058b32358035dcf8ec14aba2f699d1a917",
-                "reference": "2d7889058b32358035dcf8ec14aba2f699d1a917",
+                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/f530dbb4c73352862490aa8f6865dd9cc9d352b7",
+                "reference": "f530dbb4c73352862490aa8f6865dd9cc9d352b7",
                 "shasum": ""
             },
             "require": {
-                "gacela-project/gacela": "^1.3",
+                "gacela-project/gacela": "^1.5",
                 "php": ">=8.0.2",
                 "phpunit/php-timer": "^5.0",
                 "symfony/console": "^6.0"
@@ -179,6 +179,7 @@
             "require-dev": {
                 "ext-readline": "*",
                 "friendsofphp/php-cs-fixer": "^3.16",
+                "infection/infection": "^0.26",
                 "phpbench/phpbench": "^1.2",
                 "phpmetrics/phpmetrics": "^2.8",
                 "phpstan/phpstan": "^1.10",
@@ -221,9 +222,9 @@
             ],
             "support": {
                 "issues": "https://github.com/phel-lang/phel-lang/issues",
-                "source": "https://github.com/phel-lang/phel-lang/tree/v0.10.1"
+                "source": "https://github.com/phel-lang/phel-lang/tree/v0.11.0"
             },
-            "time": "2023-05-12T08:25:45+00:00"
+            "time": "2023-08-26T19:58:23+00:00"
         },
         {
             "name": "phpunit/php-timer",
