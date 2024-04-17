@@ -1,8 +1,6 @@
 (ns phel-cli-gui\test-keyboard
   (:require phel-cli-gui\terminal-gui :refer [read-input render]))
 
-(println "testing the keyboard...")
-
 (defn render-input [{:raw raw :hex hex}]
   (if (> (php/strlen hex) 0)
     (println (format "# Raw input: `%s`, hex: `%s`" raw hex))))
@@ -17,11 +15,6 @@
       (render-input input)
       (recur))))
 
-## vendor/bin/phel run tests/test-keyboard.phel
-(println "A")
-# (main)
+## vendor/bin/phel run src/phel/test-keyboard.phel
 (when-not *build-mode*
-  (do (println "B")
-      (main)))
-
-(println "C")
+  (main))
