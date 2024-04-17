@@ -18,6 +18,6 @@ return (new PhelConfig())
             ->setNamespacePrefix('PhelGenerated')
             ->setTargetDirectory('src/PhelGenerated')
     )
-    ->setIgnoreWhenBuilding(['local.phel'])
+    ->setIgnoreWhenBuilding(['local.phel','test-keyboard.phel'])
     ->setKeepGeneratedTempFiles(false)
-    ->setIgnoreWhenBuilding(['test-keyboard.phel']);
+;

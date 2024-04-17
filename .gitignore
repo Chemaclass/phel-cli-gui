@@ -6,6 +6,8 @@ data/
 out/
 
 *.cache
+composer.lock
 .phel-repl-history
 phel-config-local.php
 gacela-local.php
+local.phel

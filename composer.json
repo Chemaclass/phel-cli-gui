@@ -9,14 +9,16 @@
     "homepage": "https://phel-lang.org/",
     "license": "MIT",
     "require": {
-        "php": "^8.0",
+        "ext-pcntl": "*",
+        "php": "^8.2",
         "ext-readline": "*",
-        "phel-lang/phel-lang": ">=0.10",
-        "symfony/console": "^5.1 || ^6.0"
+        "phel-lang/phel-lang": ">=0.13",
+        "symfony/console": "^7.0"
     },
+    "minimum-stability": "dev",
     "require-dev": {
         "roave/security-advisories": "dev-latest",
-        "symfony/var-dumper": "5.4.x-dev"
+        "symfony/var-dumper": "6.4"
     },
     "autoload": {
         "psr-4": {
@@ -26,7 +28,7 @@
     "config": {
         "preferred-install": "dist",
         "platform": {
-            "php": "8.0.2"
+            "php": "8.2"
         }
     },
     "scripts": {

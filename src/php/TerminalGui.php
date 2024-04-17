@@ -25,7 +25,14 @@ final class TerminalGui
         $sttyMode = shell_exec('stty -g');
         shell_exec('stty -icanon -echo');
 
-        return new self($inputStream, $output, $cursor, $sttyMode);
+        $self = new self($inputStream, $output, $cursor, $sttyMode);
+
+        pcntl_signal(SIGINT, static function () use ($self) {
+            $self->cleanUp();
+            exit;
+        });
+
+        return $self;
     }
 
     /**
@@ -40,6 +47,11 @@ final class TerminalGui
     }
 
     public function __destruct()
+    {
+        $this->cleanUp();
+    }
+
+    private function cleanUp(): void
     {
         $this->cursor->show();
         stream_set_blocking($this->inputStream, true);
