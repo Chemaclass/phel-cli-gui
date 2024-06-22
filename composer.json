@@ -8,12 +8,19 @@
     ],
     "homepage": "https://phel-lang.org/",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Jose Maria Valera Reales",
+            "email": "chemaclass@outlook.es",
+            "homepage": "https://chemaclass.com"
+        }
+    ],
     "require": {
-        "ext-pcntl": "*",
         "php": "^8.2",
+        "ext-pcntl": "*",
         "ext-readline": "*",
-        "phel-lang/phel-lang": ">=0.13",
-        "symfony/console": "^7.0"
+        "phel-lang/phel-lang": ">=0.15",
+        "symfony/console": "^7.2"
     },
     "minimum-stability": "dev",
     "require-dev": {
