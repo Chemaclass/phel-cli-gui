@@ -1,5 +1,6 @@
 {
     "name": "chemaclass/phel-cli-gui",
+    "description": "Phel functions to render in the terminal. It uses the Cursor from the Symfony Command module.",
     "keywords": [
         "phel",
         "lisp",
@@ -41,6 +42,6 @@
     "scripts": {
         "build": "vendor/bin/phel build --no-cache",
         "test": "vendor/bin/phel test",
-        "format": "vendor/bin/phel format src tests"
+        "format": "vendor/bin/phel format"
     }
 }
