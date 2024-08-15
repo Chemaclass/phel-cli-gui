@@ -17,11 +17,11 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": ">=8.2",
         "ext-pcntl": "*",
         "ext-readline": "*",
         "phel-lang/phel-lang": ">=0.15",
-        "symfony/console": "^7.2"
+        "symfony/console": "^7.1"
     },
     "minimum-stability": "dev",
     "require-dev": {
