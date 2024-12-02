@@ -20,13 +20,13 @@
         "php": ">=8.2",
         "ext-pcntl": "*",
         "ext-readline": "*",
-        "phel-lang/phel-lang": ">=0.15",
+        "phel-lang/phel-lang": "^0.16",
         "symfony/console": "^7.1"
     },
     "minimum-stability": "dev",
     "require-dev": {
         "roave/security-advisories": "dev-latest",
-        "symfony/var-dumper": "6.4"
+        "symfony/var-dumper": "7.2"
     },
     "autoload": {
         "psr-4": {
