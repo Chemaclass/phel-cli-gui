@@ -3,14 +3,16 @@
   (:use \PhelCliGui\BorderStyle)
   (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle))
 
-(def input-stream php/STDIN)
-(def gui (php/:: TerminalGui (withStream input-stream)))
+(defn- get-gui
+  "Gets the singleton GUI instance."
+  []
+  (php/:: TerminalGui (getInstance php/STDIN)))
 
 (defn add-output-formatter [{:style-name style-name
                              :foreground foreground
                              :background background
                              :options options}]
-  (php/-> gui (addOutputFormatter style-name
+  (php/-> (get-gui) (addOutputFormatter style-name
                                   (php/new OutputFormatterStyle
                                            foreground
                                            background
@@ -19,24 +21,24 @@
 (defn read-input
   "Reads the input stream and returns it in different formats."
   [length]
-  (let [raw (php/fread input-stream length)
+  (let [raw (php/fread php/STDIN length)
         hex (php/bin2hex raw)]
     {:raw raw :hex hex}))
 
 (defn clear-screen
   "Clears the entire screen."
   []
-  (php/-> gui (clearScreen)))
+  (php/-> (get-gui) (clearScreen)))
 
 (defn clear-output
   "Clears all the output from the cursors' current position to the end of the screen."
   []
-  (php/-> gui (clearOutput)))
+  (php/-> (get-gui) (clearOutput)))
 
 (defn clear-line
   "Clears the output from the line."
   [line]
-  (php/-> gui (clearLine line)))
+  (php/-> (get-gui) (clearLine line)))
 
 (defn- make-border-style
   [{:horizontal ch :vertical cv :corner cc}]
@@ -45,9 +47,14 @@
 (defn render-board
   "Renders the borders of a board."
   [{:width w :height h} & [border-style]]
-  (php/-> gui (renderBoard w h (make-border-style border-style))))
+  (php/-> (get-gui) (renderBoard w h (make-border-style border-style))))
 
 (defn render
   "Render any text to a concrete position (x,y) in the terminal."
   [x y text & [style]]
-  (php/-> gui (render x y text (or style ""))))
+  (php/-> (get-gui) (render x y text (or style ""))))
+
+(defn cleanup-gui
+  "Cleanup the GUI singleton instance."
+  []
+  (php/:: TerminalGui (resetInstance)))

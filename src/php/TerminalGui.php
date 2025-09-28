@@ -13,6 +13,16 @@ final class TerminalGui
 {
     private int $maxWidth = 0;
     private int $maxHeight = 0;
+    private static ?self $instance = null;
+
+    public static function getInstance($inputStream = STDIN): self
+    {
+        if (self::$instance === null) {
+            self::$instance = self::withStream($inputStream);
+        }
+
+        return self::$instance;
+    }
 
     public static function withStream($inputStream = STDIN): self
     {
@@ -22,10 +32,23 @@ final class TerminalGui
         $cursor->moveToPosition(0, 0);
 
         stream_set_blocking($inputStream, false);
-        $sttyMode = shell_exec('stty -g');
-        shell_exec('stty -icanon -echo');
+        $sttyMode = null;
+
+        // Only modify terminal settings if we're in an actual terminal
+        if (posix_isatty($inputStream)) {
+            $sttyMode = shell_exec('stty -g');
+            // Only change terminal mode if we successfully captured the current mode
+            if ($sttyMode !== null && $sttyMode !== false && trim($sttyMode) !== '') {
+                shell_exec('stty -icanon -echo');
+            }
+        }
 
         $self = new self($inputStream, $output, $cursor, $sttyMode);
+
+        // Register cleanup for unexpected exits
+        register_shutdown_function(static function () use ($self) {
+            $self->cleanUp();
+        });
 
         pcntl_signal(SIGINT, static function () use ($self) {
             $self->cleanUp();
@@ -51,13 +74,40 @@ final class TerminalGui
         $this->cleanUp();
     }
 
+    public static function resetInstance(): void
+    {
+        if (self::$instance !== null) {
+            self::$instance->cleanUp();
+            self::$instance = null;
+        }
+    }
+
     private function cleanUp(): void
     {
+        // Reset cursor to normal state and clear any pending queries
         $this->cursor->show();
+        $this->cursor->moveToPosition(0, 0);
+
+        // Clear any pending terminal queries/responses
+        $this->output->write("\033[0m"); // Reset all formatting
+
         stream_set_blocking($this->inputStream, true);
-        if ($this->sttyMode !== null) {
-            shell_exec(sprintf('stty %s', $this->sttyMode));
+
+        // Restore terminal mode if we're in a terminal and have a valid saved mode
+        if (posix_isatty($this->inputStream)) {
+            if ($this->sttyMode !== null && $this->sttyMode !== false && trim($this->sttyMode) !== '') {
+                shell_exec(sprintf('stty %s', escapeshellarg(trim($this->sttyMode))));
+            } else {
+                // Fallback: restore to sane defaults if we don't have the original mode
+                shell_exec('stty icanon echo');
+            }
         }
+
+        // Flush any remaining output
+        $this->output->write('');
+
+        // Clear the singleton instance
+        self::$instance = null;
     }
 
     public function addOutputFormatter(string $name, OutputFormatterStyleInterface $style): self
