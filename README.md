@@ -11,6 +11,10 @@ It uses the Cursor from the Symfony Command module.
 - `(clear-line [line])`: clears the output from the line.
 - `(render-board [{:width w :height h}])`: renders the borders of a board.
 - `(render [x y text & [style]])`: render any text to a concrete position (x,y) in the terminal.
+- `(render-text-block [x y text & [style]])`: render multiline strings without managing line offsets manually.
+- `(draw-horizontal-line [x y length char & [style]])`: quickly draw separators or rulers.
+- `(draw-vertical-line [x y length char & [style]])`: draw vertical guides and columns.
+- `(draw-box [{:x x :y y :width w :height h :border {:horizontal h :vertical v :corner c} :fill-char f}])`: draw framed areas with optional fill character.
 
 ### Example
 
@@ -45,3 +49,8 @@ Source:
 You can see some real examples using this library:
 
 - https://github.com/Chemaclass/phel-snake
+
+### Development
+
+- Install dependencies with `composer install`.
+- Run the full test-suite with `composer test` (runs both the Phel and PHP checks).

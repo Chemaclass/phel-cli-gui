@@ -22,11 +22,26 @@ final class BorderStyle
         ?string $vertical = self::DEFAULT_VERTICAL,
         ?string $corner = self::DEFAULT_CORNER
     ) {
-        $horizontal = ($horizontal === null) ? self::DEFAULT_HORIZONTAL : $horizontal[0];
-        $vertical = ($vertical === null) ? self::DEFAULT_VERTICAL : $vertical[0];
-        $corner = ($corner === null) ? self::DEFAULT_CORNER : $corner[0];
+        $horizontal = self::firstCharacter($horizontal, self::DEFAULT_HORIZONTAL);
+        $vertical = self::firstCharacter($vertical, self::DEFAULT_VERTICAL);
+        $corner = self::firstCharacter($corner, self::DEFAULT_CORNER);
 
         return new self($horizontal, $vertical, $corner);
+    }
+
+    private static function firstCharacter(?string $value, string $fallback): string
+    {
+        if ($value === null || $value === '') {
+            return $fallback;
+        }
+
+        if (function_exists('mb_substr')) {
+            $char = mb_substr($value, 0, 1);
+        } else {
+            $char = substr($value, 0, 1);
+        }
+
+        return $char === '' ? $fallback : $char;
     }
 
     public function horizontal(): string

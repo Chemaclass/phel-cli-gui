@@ -21,17 +21,23 @@
         "ext-pcntl": "*",
         "ext-posix": "*",
         "ext-readline": "*",
-        "phel-lang/phel-lang": "^0.22",
+        "phel-lang/phel-lang": "dev-main",
         "symfony/console": "^7.3"
     },
     "minimum-stability": "dev",
     "require-dev": {
+        "phpunit/phpunit": "^10.5",
         "roave/security-advisories": "dev-latest",
         "symfony/var-dumper": "7.2"
     },
     "autoload": {
         "psr-4": {
             "PhelCliGui\\": "src/php/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhelCliGui\\Tests\\": "tests/php/"
         }
     },
     "config": {
@@ -42,7 +48,12 @@
     },
     "scripts": {
         "build": "vendor/bin/phel build --no-cache",
-        "test": "vendor/bin/phel test",
+        "test": [
+          "@test:phel",
+          "@test:php"
+        ],
+        "test:phel": "vendor/bin/phel test",
+        "test:php": "vendor/bin/phpunit tests",
         "format": "vendor/bin/phel format"
     }
 }

@@ -42,8 +42,9 @@
   (php/-> (get-gui) (clearLine line)))
 
 (defn- make-border-style
-  [{:horizontal ch :vertical cv :corner cc}]
-  (php/:: BorderStyle (withChars ch cv cc)))
+  [border-style]
+  (let [{:horizontal ch :vertical cv :corner cc} (or border-style {})]
+    (php/:: BorderStyle (withChars ch cv cc))))
 
 (defn render-board
   "Renders the borders of a board."
@@ -54,6 +55,27 @@
   "Render any text to a concrete position (x,y) in the terminal."
   [x y text & [style]]
   (php/-> (get-gui) (render x y text (or style ""))))
+
+(defn render-text-block
+  "Render multiline text at a specific position."
+  [x y text & [style]]
+  (php/-> (get-gui) (renderTextBlock x y text (or style ""))))
+
+(defn draw-horizontal-line
+  "Draw a horizontal line using a given character."
+  [x y length char & [style]]
+  (php/-> (get-gui) (drawHorizontalLine x y length char (or style ""))))
+
+(defn draw-vertical-line
+  "Draw a vertical line using a given character."
+  [x y length char & [style]]
+  (php/-> (get-gui) (drawVerticalLine x y length char (or style ""))))
+
+(defn draw-box
+  "Draw a box at a given position with optional fill and border styles."
+  [{:x x :y y :width width :height height :border border :fill-char fill-char}]
+  (php/-> (get-gui)
+          (drawBox x y width height (make-border-style border) (or fill-char " "))))
 
 (defn cleanup-gui
   "Cleanup the GUI singleton instance."
