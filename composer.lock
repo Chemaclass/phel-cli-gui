@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f7ddeb778b3f4b09491df056024cdaf7",
+    "content-hash": "9ae10559cab7f2edaa2dbe24d4876c33",
     "packages": [
         {
             "name": "gacela-project/container",
@@ -160,16 +160,16 @@
         },
         {
             "name": "phel-lang/phel-lang",
-            "version": "dev-main",
+            "version": "v0.22.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phel-lang/phel-lang.git",
-                "reference": "168a146a619a1e789c671655f88cd5359bd9710c"
+                "reference": "7335a842891aba04cb4ddcd4905cb6e23fd6ac25"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/168a146a619a1e789c671655f88cd5359bd9710c",
-                "reference": "168a146a619a1e789c671655f88cd5359bd9710c",
+                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/7335a842891aba04cb4ddcd4905cb6e23fd6ac25",
+                "reference": "7335a842891aba04cb4ddcd4905cb6e23fd6ac25",
                 "shasum": ""
             },
             "require": {
@@ -181,7 +181,7 @@
             "require-dev": {
                 "ergebnis/composer-normalize": "^2.48",
                 "ext-readline": "*",
-                "friendsofphp/php-cs-fixer": "^3.88",
+                "friendsofphp/php-cs-fixer": "^3.87",
                 "phpbench/phpbench": "^1.4",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^10.5",
@@ -190,7 +190,6 @@
                 "symfony/var-dumper": "^7.3",
                 "vimeo/psalm": "^5.26"
             },
-            "default-branch": true,
             "bin": [
                 "bin/phel"
             ],
@@ -228,7 +227,7 @@
             ],
             "support": {
                 "issues": "https://github.com/phel-lang/phel-lang/issues",
-                "source": "https://github.com/phel-lang/phel-lang/tree/main"
+                "source": "https://github.com/phel-lang/phel-lang/tree/v0.22.2"
             },
             "funding": [
                 {
@@ -236,7 +235,7 @@
                     "type": "custom"
                 }
             ],
-            "time": "2025-09-28T22:39:39+00:00"
+            "time": "2025-09-23T13:36:11+00:00"
         },
         {
             "name": "phpunit/php-timer",
@@ -3903,7 +3902,6 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "phel-lang/phel-lang": 20,
         "roave/security-advisories": 20
     },
     "prefer-stable": false,
