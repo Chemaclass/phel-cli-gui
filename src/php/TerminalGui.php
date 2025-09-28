@@ -86,7 +86,6 @@ final class TerminalGui
     {
         // Reset cursor to normal state and clear any pending queries
         $this->cursor->show();
-        $this->cursor->moveToPosition(0, 0);
 
         // Clear any pending terminal queries/responses
         $this->output->write("\033[0m"); // Reset all formatting

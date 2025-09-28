@@ -12,11 +12,12 @@
                              :foreground foreground
                              :background background
                              :options options}]
-  (php/-> (get-gui) (addOutputFormatter style-name
-                                  (php/new OutputFormatterStyle
-                                           foreground
-                                           background
-                                           (to-php-array (or options []))))))
+  (php/-> (get-gui) (addOutputFormatter
+                     style-name
+                     (php/new OutputFormatterStyle
+                              foreground
+                              background
+                              (to-php-array (or options []))))))
 
 (defn read-input
   "Reads the input stream and returns it in different formats."
