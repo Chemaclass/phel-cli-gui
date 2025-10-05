@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9ae10559cab7f2edaa2dbe24d4876c33",
+    "content-hash": "b2abd039fbb06549e3ea47a0ab8da009",
     "packages": [
         {
             "name": "gacela-project/container",
@@ -160,16 +160,16 @@
         },
         {
             "name": "phel-lang/phel-lang",
-            "version": "v0.22.2",
+            "version": "v0.23.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phel-lang/phel-lang.git",
-                "reference": "7335a842891aba04cb4ddcd4905cb6e23fd6ac25"
+                "reference": "a4c98b597fb5addc179ffa36e4c542ed7059a559"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/7335a842891aba04cb4ddcd4905cb6e23fd6ac25",
-                "reference": "7335a842891aba04cb4ddcd4905cb6e23fd6ac25",
+                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/a4c98b597fb5addc179ffa36e4c542ed7059a559",
+                "reference": "a4c98b597fb5addc179ffa36e4c542ed7059a559",
                 "shasum": ""
             },
             "require": {
@@ -181,7 +181,7 @@
             "require-dev": {
                 "ergebnis/composer-normalize": "^2.48",
                 "ext-readline": "*",
-                "friendsofphp/php-cs-fixer": "^3.87",
+                "friendsofphp/php-cs-fixer": "^3.88",
                 "phpbench/phpbench": "^1.4",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^10.5",
@@ -217,7 +217,7 @@
                     "homepage": "https://chemaclass.com"
                 }
             ],
-            "description": "Phel is a functional programming language that transpiles to PHP",
+            "description": "Phel is a functional programming language that compiles to PHP",
             "homepage": "https://phel-lang.org/",
             "keywords": [
                 "functional",
@@ -227,7 +227,7 @@
             ],
             "support": {
                 "issues": "https://github.com/phel-lang/phel-lang/issues",
-                "source": "https://github.com/phel-lang/phel-lang/tree/v0.22.2"
+                "source": "https://github.com/phel-lang/phel-lang/tree/v0.23.1"
             },
             "funding": [
                 {
@@ -235,7 +235,7 @@
                     "type": "custom"
                 }
             ],
-            "time": "2025-09-23T13:36:11+00:00"
+            "time": "2025-10-05T19:39:37+00:00"
         },
         {
             "name": "phpunit/php-timer",
@@ -369,12 +369,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "a687b340755a81fe8a7114d45e3665feaa06b8cc"
+                "reference": "caff466632e62fc7d943b0f051713612ba0765ab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/a687b340755a81fe8a7114d45e3665feaa06b8cc",
-                "reference": "a687b340755a81fe8a7114d45e3665feaa06b8cc",
+                "url": "https://api.github.com/repos/symfony/console/zipball/caff466632e62fc7d943b0f051713612ba0765ab",
+                "reference": "caff466632e62fc7d943b0f051713612ba0765ab",
                 "shasum": ""
             },
             "require": {
@@ -459,7 +459,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-09-27T09:05:58+00:00"
+            "time": "2025-10-04T11:31:13+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
@@ -1609,12 +1609,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "e24fb46da450d8e6a5788670513c1af1424f16ca"
+                "reference": "03eff820b62fd290e8738c23a6577170e6b83bb9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/e24fb46da450d8e6a5788670513c1af1424f16ca",
-                "reference": "e24fb46da450d8e6a5788670513c1af1424f16ca",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/03eff820b62fd290e8738c23a6577170e6b83bb9",
+                "reference": "03eff820b62fd290e8738c23a6577170e6b83bb9",
                 "shasum": ""
             },
             "require": {
@@ -1686,7 +1686,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/10.5.58"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/10.5"
             },
             "funding": [
                 {
@@ -1710,7 +1710,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-09-28T12:04:46+00:00"
+            "time": "2025-10-03T04:33:10+00:00"
         },
         {
             "name": "roave/security-advisories",
@@ -1718,12 +1718,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Roave/SecurityAdvisories.git",
-                "reference": "684ef27cdce62b6562f77a92dc76bdfb46542a2d"
+                "reference": "60ac6a710b7b0527786041ba96200bd49aa8de7e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/684ef27cdce62b6562f77a92dc76bdfb46542a2d",
-                "reference": "684ef27cdce62b6562f77a92dc76bdfb46542a2d",
+                "url": "https://api.github.com/repos/Roave/SecurityAdvisories/zipball/60ac6a710b7b0527786041ba96200bd49aa8de7e",
+                "reference": "60ac6a710b7b0527786041ba96200bd49aa8de7e",
                 "shasum": ""
             },
             "conflict": {
@@ -1765,10 +1765,10 @@
                 "athlon1600/php-proxy-app": "<=3",
                 "athlon1600/youtube-downloader": "<=4",
                 "austintoddj/canvas": "<=3.4.2",
-                "auth0/auth0-php": ">=8.0.0.0-beta1,<8.14",
-                "auth0/login": "<7.17",
-                "auth0/symfony": "<5.4",
-                "auth0/wordpress": "<5.3",
+                "auth0/auth0-php": ">=3.3,<=8.16",
+                "auth0/login": "<=7.18",
+                "auth0/symfony": "<=5.4.1",
+                "auth0/wordpress": "<=5.3",
                 "automad/automad": "<2.0.0.0-alpha5",
                 "automattic/jetpack": "<9.8",
                 "awesome-support/awesome-support": "<=6.0.7",
@@ -1885,7 +1885,7 @@
                 "doctrine/mongodb-odm": "<1.0.2",
                 "doctrine/mongodb-odm-bundle": "<3.0.1",
                 "doctrine/orm": ">=1,<1.2.4|>=2,<2.4.8|>=2.5,<2.5.1|>=2.8.3,<2.8.4",
-                "dolibarr/dolibarr": "<=21.0.2",
+                "dolibarr/dolibarr": "<21.0.3",
                 "dompdf/dompdf": "<2.0.4",
                 "doublethreedigital/guest-entries": "<3.1.2",
                 "drupal/admin_audit_trail": "<1.0.5",
@@ -2074,7 +2074,7 @@
                 "joomla/archive": "<1.1.12|>=2,<2.0.1",
                 "joomla/database": ">=1,<2.2|>=3,<3.4",
                 "joomla/filesystem": "<1.6.2|>=2,<2.0.1",
-                "joomla/filter": "<1.4.4|>=2,<2.0.1",
+                "joomla/filter": "<2.0.6|>=3,<3.0.5|==4",
                 "joomla/framework": "<1.5.7|>=2.5.4,<=3.8.12",
                 "joomla/input": ">=2,<2.0.2",
                 "joomla/joomla-cms": "<3.9.12|>=4,<4.4.13|>=5,<5.2.6",
@@ -2492,7 +2492,7 @@
                 "thelia/thelia": ">=2.1,<2.1.3",
                 "theonedemon/phpwhois": "<=4.2.5",
                 "thinkcmf/thinkcmf": "<6.0.8",
-                "thorsten/phpmyfaq": "<=4.0.1",
+                "thorsten/phpmyfaq": "<=4.0.1|>=4.0.7,<4.0.13",
                 "tikiwiki/tiki-manager": "<=17.1",
                 "timber/timber": ">=0.16.6,<1.23.1|>=1.24,<1.24.1|>=2,<2.1",
                 "tinymce/tinymce": "<7.2",
@@ -2684,7 +2684,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-09-24T21:05:21+00:00"
+            "time": "2025-10-03T15:05:30+00:00"
         },
         {
             "name": "sebastian/cli-parser",
