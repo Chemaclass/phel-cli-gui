@@ -21,8 +21,8 @@
         "ext-pcntl": "*",
         "ext-posix": "*",
         "ext-readline": "*",
-        "phel-lang/phel-lang": "^0.23",
-        "symfony/console": "^7.3"
+        "phel-lang/phel-lang": "^0.29",
+        "symfony/console": "^7.4"
     },
     "minimum-stability": "dev",
     "require-dev": {
