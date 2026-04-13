@@ -7,7 +7,7 @@ namespace PhelCliGui;
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
-use Symfony\Component\Console\Output\ConsoleOutputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 final class TerminalGui
 {
@@ -23,7 +23,7 @@ final class TerminalGui
 
     public static function withStream(
         $inputStream = STDIN,
-        ?ConsoleOutputInterface $output = null,
+        ?OutputInterface $output = null,
         ?Cursor $cursor = null,
         bool $registerShutdownHandlers = true,
     ): self {
@@ -53,7 +53,7 @@ final class TerminalGui
      */
     private function __construct(
         private $inputStream,
-        private readonly ConsoleOutputInterface $output,
+        private readonly OutputInterface $output,
         private readonly Cursor $cursor,
         private string|null|false $sttyMode,
     ) {
@@ -88,6 +88,16 @@ final class TerminalGui
     public function clearScreen(): void
     {
         $this->cursor->clearScreen();
+    }
+
+    public function hideCursor(): void
+    {
+        $this->cursor->hide();
+    }
+
+    public function showCursor(): void
+    {
+        $this->cursor->show();
     }
 
     public function clearLine(int $line): void
@@ -141,6 +151,26 @@ final class TerminalGui
             $this->write($segment, $style);
         }
         $this->updateBoundsForArea($column, $row, 1, $length);
+        $this->finalizeCursor();
+    }
+
+    public function fillRegion(
+        int $column,
+        int $row,
+        int $width,
+        int $height,
+        string $fillChar = ' ',
+    ): void {
+        if ($width < 1 || $height < 1) {
+            throw new \InvalidArgumentException('Region width and height must be at least 1.');
+        }
+
+        $line = TerminalCanvas::horizontalLine($width, $fillChar);
+        for ($offset = 0; $offset < $height; $offset++) {
+            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->write($line);
+        }
+        $this->updateBoundsForArea($column, $row, $width, $height);
         $this->finalizeCursor();
     }
 

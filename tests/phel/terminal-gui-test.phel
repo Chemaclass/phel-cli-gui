@@ -1,7 +1,8 @@
 (ns phel-cli-gui-test\terminal-gui-test
-  (:require phel\test :refer [deftest is]))
+  (:require phel\test :refer [deftest is testing])
+  (:require phel-cli-gui\terminal-gui :refer [parse-key]))
 
-# Test data structures and parameter validation without calling GUI functions
+;; Data structure and parameter validation tests (no GUI side effects).
 
 (deftest test-read-input-structure
   (let [test-input {:raw "test" :hex "74657374"}]
@@ -28,3 +29,34 @@
     (is (= "red" (:foreground formatter-config)))
     (is (= "blue" (:background formatter-config)))
     (is (= ["bold" "underscore"] (:options formatter-config)))))
+
+(deftest test-fill-region-config-structure
+  (let [region {:x 1 :y 2 :width 8 :height 3 :fill-char "."}]
+    (is (= 1 (:x region)))
+    (is (= 2 (:y region)))
+    (is (= 8 (:width region)))
+    (is (= 3 (:height region)))
+    (is (= "." (:fill-char region)))))
+
+(deftest test-parse-key-empty-input-returns-nil
+  (is (nil? (parse-key {:raw "" :hex ""}))))
+
+(deftest test-parse-key-recognises-arrow-keys
+  (testing "arrow keys"
+           (is (= :up    (parse-key {:raw "\e[A" :hex "1b5b41"})))
+           (is (= :down  (parse-key {:raw "\e[B" :hex "1b5b42"})))
+           (is (= :right (parse-key {:raw "\e[C" :hex "1b5b43"})))
+           (is (= :left  (parse-key {:raw "\e[D" :hex "1b5b44"})))))
+
+(deftest test-parse-key-recognises-control-keys
+  (testing "control keys"
+           (is (= :enter     (parse-key {:raw "\r"  :hex "0d"})))
+           (is (= :enter     (parse-key {:raw "\n"  :hex "0a"})))
+           (is (= :escape    (parse-key {:raw "\e"  :hex "1b"})))
+           (is (= :tab       (parse-key {:raw "\t"  :hex "09"})))
+           (is (= :backspace (parse-key {:raw ""    :hex "7f"})))
+           (is (= :backspace (parse-key {:raw ""    :hex "08"})))))
+
+(deftest test-parse-key-falls-back-to-char
+  (is (= {:char "a"} (parse-key {:raw "a" :hex "61"})))
+  (is (= {:char "Z"} (parse-key {:raw "Z" :hex "5a"}))))
