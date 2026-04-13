@@ -1,7 +1,8 @@
 (ns phel-cli-gui\terminal-gui
   (:use \PhelCliGui\TerminalGui)
   (:use \PhelCliGui\BorderStyle)
-  (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle))
+  (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle)
+  (:use \Symfony\Component\Console\Terminal))
 
 (defn- get-gui
   "Gets the singleton GUI instance."
@@ -36,6 +37,63 @@
   [length]
   (let [raw (php/fread php/STDIN length)]
     {:raw raw :hex (php/bin2hex raw)}))
+
+(defn parse-key
+  "Maps a read-input result to a key keyword or {:char raw}.
+  Known keys: :up :down :left :right :enter :escape :tab :backspace.
+  Empty input returns nil."
+  {:example "(parse-key {:raw \"\\r\" :hex \"0d\"}) ; => :enter"
+   :see-also ["read-key" "read-input"]}
+  [{:keys [raw hex]}]
+  (case hex
+    "" nil
+    "1b5b41" :up
+    "1b5b42" :down
+    "1b5b43" :right
+    "1b5b44" :left
+    "0d" :enter
+    "0a" :enter
+    "1b" :escape
+    "09" :tab
+    "7f" :backspace
+    "08" :backspace
+    {:char raw}))
+
+(defn read-key
+  "Reads one key press from stdin and returns a key keyword or {:char c}.
+  Returns nil when no input is available. See parse-key for the key set."
+  {:see-also ["parse-key" "read-input"]}
+  []
+  (parse-key (read-input 3)))
+
+(defn terminal-size
+  "Returns the current terminal dimensions as {:width w :height h}."
+  {:example "(terminal-size) ; => {:width 120 :height 40}"}
+  []
+  (let [term (php/new Terminal)]
+    {:width (php/-> term (getWidth))
+     :height (php/-> term (getHeight))}))
+
+(defn max-bounds
+  "Returns the maximum (x,y) extent reached by render/draw operations
+  on the current GUI instance as {:width w :height h}."
+  {:see-also ["render" "draw-box"]}
+  []
+  (let [gui (get-gui)]
+    {:width (php/-> gui (getMaxWidth))
+     :height (php/-> gui (getMaxHeight))}))
+
+(defn hide-cursor
+  "Hides the terminal cursor."
+  {:see-also ["show-cursor"]}
+  []
+  (gui-call (hideCursor)))
+
+(defn show-cursor
+  "Shows the terminal cursor (hidden by default after init)."
+  {:see-also ["hide-cursor"]}
+  []
+  (gui-call (showCursor)))
 
 (defn clear-screen
   "Clears the entire screen."
@@ -96,10 +154,18 @@
   ([x y length char style]
    (gui-call (drawVerticalLine x y length char style))))
 
+(defn fill-region
+  "Paints an area with a fill character, without any border."
+  {:example "(fill-region {:x 0 :y 0 :width 10 :height 3 :fill-char \".\"})"
+   :see-also ["draw-box" "clear-output"]}
+  [{:keys [x y width height fill-char]
+    :or {fill-char \space}}]
+  (gui-call (fillRegion x y width height fill-char)))
+
 (defn draw-box
   "Draw a box at a given position with optional fill and border styles."
   {:example "(draw-box {:x 0 :y 0 :width 10 :height 5 :fill-char \".\"})"
-   :see-also ["render-board" "draw-horizontal-line" "draw-vertical-line"]}
+   :see-also ["render-board" "fill-region" "draw-horizontal-line" "draw-vertical-line"]}
   [{:keys [x y width height border fill-char]
     :or {fill-char \space}}]
   (gui-call (drawBox x y width height (make-border-style border) fill-char)))
