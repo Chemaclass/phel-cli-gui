@@ -13,51 +13,33 @@ final class TerminalGui
 {
     private int $maxWidth = 0;
     private int $maxHeight = 0;
-    private static ?self $instance = null;
     private bool $cleanedUp = false;
+    private static ?self $instance = null;
 
     public static function getInstance($inputStream = STDIN): self
     {
-        if (self::$instance === null) {
-            self::$instance = self::withStream($inputStream);
-        }
-
-        return self::$instance;
+        return self::$instance ??= self::withStream($inputStream);
     }
 
     public static function withStream(
         $inputStream = STDIN,
         ?ConsoleOutputInterface $output = null,
         ?Cursor $cursor = null,
-        bool $registerShutdownHandlers = true
-    ): self
-    {
+        bool $registerShutdownHandlers = true,
+    ): self {
         $output ??= new ConsoleOutput();
         $cursor ??= new Cursor($output);
         $cursor->hide();
         $cursor->moveToPosition(0, 0);
 
         self::setBlockingIfPossible($inputStream, false);
-        $sttyMode = null;
-
-        // Only modify terminal settings if we're in an actual terminal
-        if (self::isStreamResource($inputStream) && function_exists('posix_isatty') && @posix_isatty($inputStream)) {
-            $sttyMode = shell_exec('stty -g');
-            // Only change terminal mode if we successfully captured the current mode
-            if ($sttyMode !== null && $sttyMode !== false && trim($sttyMode) !== '') {
-                shell_exec('stty -icanon -echo');
-            }
-        }
+        $sttyMode = self::captureSttyMode($inputStream);
 
         $self = new self($inputStream, $output, $cursor, $sttyMode);
 
         if ($registerShutdownHandlers) {
-            // Register cleanup for unexpected exits
-            register_shutdown_function(static function () use ($self) {
-                $self->cleanUp();
-            });
-
-            pcntl_signal(SIGINT, static function () use ($self) {
+            register_shutdown_function(static fn () => $self->cleanUp());
+            pcntl_signal(SIGINT, static function () use ($self): void {
                 $self->cleanUp();
                 exit;
             });
@@ -71,11 +53,10 @@ final class TerminalGui
      */
     private function __construct(
         private $inputStream,
-        private ConsoleOutputInterface $output,
-        private Cursor $cursor,
-        private string|null|false $sttyMode
+        private readonly ConsoleOutputInterface $output,
+        private readonly Cursor $cursor,
+        private string|null|false $sttyMode,
     ) {
-        $this->cleanedUp = false;
     }
 
     public function __destruct()
@@ -85,69 +66,8 @@ final class TerminalGui
 
     public static function resetInstance(): void
     {
-        if (self::$instance !== null) {
-            self::$instance->cleanUp();
-            self::$instance = null;
-        }
-    }
-
-    private function cleanUp(): void
-    {
-        if ($this->cleanedUp) {
-            return;
-        }
-
-        $this->cleanedUp = true;
-
-        // Reset cursor to normal state and clear any pending queries
-        $this->cursor->show();
-
-        // Clear any pending terminal queries/responses
-        $this->output->write("\033[0m"); // Reset all formatting
-
-        if (self::isStreamResource($this->inputStream)) {
-            self::setBlockingIfPossible($this->inputStream, true);
-
-            // Restore terminal mode if we're in a terminal and have a valid saved mode
-            if (function_exists('posix_isatty') && @posix_isatty($this->inputStream)) {
-                if ($this->sttyMode !== null && $this->sttyMode !== false && trim($this->sttyMode) !== '') {
-                    shell_exec(sprintf('stty %s', escapeshellarg(trim($this->sttyMode))));
-                } else {
-                    // Fallback: restore to sane defaults if we don't have the original mode
-                    shell_exec('stty icanon echo');
-                }
-            }
-        }
-
-        // Flush any remaining output
-        $this->output->write('');
-
-        // Clear the singleton instance
+        self::$instance?->cleanUp();
         self::$instance = null;
-    }
-
-    /**
-     * @param resource|mixed $stream
-     */
-    private static function isStreamResource($stream): bool
-    {
-        return is_resource($stream) && get_resource_type($stream) === 'stream';
-    }
-
-    /**
-     * @param resource|mixed $stream
-     */
-    private static function setBlockingIfPossible($stream, bool $shouldBlock): bool
-    {
-        if (!self::isStreamResource($stream)) {
-            return false;
-        }
-
-        try {
-            return stream_set_blocking($stream, $shouldBlock);
-        } catch (\Throwable $exception) {
-            return false;
-        }
     }
 
     public function addOutputFormatter(string $name, OutputFormatterStyleInterface $style): self
@@ -160,9 +80,9 @@ final class TerminalGui
     public function renderBoard(
         int $width,
         int $height,
-        ?BorderStyle $style = null
+        ?BorderStyle $style = null,
     ): void {
-        $this->drawBox(0, 0, $width, $height, $style ?? BorderStyle::withChars());
+        $this->drawBox(0, 0, $width, $height, $style);
     }
 
     public function clearScreen(): void
@@ -185,8 +105,7 @@ final class TerminalGui
     {
         $this->cursor->moveToPosition($column, $row);
         $this->write($text, $style);
-        $this->write(PHP_EOL);
-        $this->updateBoundsForText($column, $row, $text);
+        $this->updateBoundsForArea($column, $row, Text::displayWidth($text), 1);
         $this->finalizeCursor();
     }
 
@@ -194,8 +113,11 @@ final class TerminalGui
     {
         $lines = preg_split('/\R/', $text) ?: [''];
         foreach ($lines as $offset => $line) {
-            $this->render($column, $row + $offset, $line, $style);
+            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->write($line, $style);
+            $this->updateBoundsForArea($column, $row + $offset, Text::displayWidth($line), 1);
         }
+        $this->finalizeCursor();
     }
 
     public function drawHorizontalLine(int $column, int $row, int $length, string $char, ?string $style = ''): void
@@ -203,7 +125,6 @@ final class TerminalGui
         $line = TerminalCanvas::horizontalLine($length, $char);
         $this->cursor->moveToPosition($column, $row);
         $this->write($line, $style);
-        $this->write(PHP_EOL);
         $this->updateBoundsForArea($column, $row, $length, 1);
         $this->finalizeCursor();
     }
@@ -214,10 +135,13 @@ final class TerminalGui
             throw new \InvalidArgumentException('Vertical line length must be at least 1.');
         }
 
-        $segment = TerminalCanvas::horizontalLine(1, $char !== '' ? $char : '|');
+        $segment = Text::firstChar($char !== '' ? $char : '|', '|');
         for ($offset = 0; $offset < $length; $offset++) {
-            $this->render($column, $row + $offset, $segment, $style);
+            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->write($segment, $style);
         }
+        $this->updateBoundsForArea($column, $row, 1, $length);
+        $this->finalizeCursor();
     }
 
     public function drawBox(
@@ -226,15 +150,13 @@ final class TerminalGui
         int $width,
         int $height,
         ?BorderStyle $style = null,
-        string $fillChar = ' '
+        string $fillChar = ' ',
     ): void {
-        $style ??= BorderStyle::withChars();
-        $lines = TerminalCanvas::boxLines($width, $height, $style, $fillChar);
+        $lines = TerminalCanvas::boxLines($width, $height, $style ?? BorderStyle::withChars(), $fillChar);
 
         foreach ($lines as $offset => $line) {
             $this->cursor->moveToPosition($column, $row + $offset);
             $this->write($line);
-            $this->write(PHP_EOL);
         }
 
         $this->updateBoundsForArea($column, $row, $width, $height);
@@ -253,17 +175,7 @@ final class TerminalGui
 
     private function write(string $text, ?string $style = ''): void
     {
-        if (empty($style)) {
-            $this->output->write($text);
-        } else {
-            $this->output->write("<$style>$text</$style>");
-        }
-    }
-
-    private function updateBoundsForText(int $column, int $row, string $text): void
-    {
-        $width = $this->stringWidth($text);
-        $this->updateBoundsForArea($column, $row, $width === 0 ? 1 : $width, 1);
+        $this->output->write(empty($style) ? $text : "<$style>$text</$style>");
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void
@@ -277,16 +189,80 @@ final class TerminalGui
         $this->cursor->moveToPosition($this->maxWidth, $this->maxHeight);
     }
 
-    private function stringWidth(string $text): int
+    private function cleanUp(): void
     {
-        if ($text === '') {
-            return 0;
+        if ($this->cleanedUp) {
+            return;
         }
 
-        if (function_exists('mb_strlen')) {
-            return mb_strlen($text);
+        $this->cleanedUp = true;
+        $this->cursor->show();
+        $this->output->write("\033[0m");
+
+        if (self::isStreamResource($this->inputStream)) {
+            self::setBlockingIfPossible($this->inputStream, true);
+            $this->restoreSttyMode();
         }
 
-        return strlen($text);
+        self::$instance = null;
+    }
+
+    private function restoreSttyMode(): void
+    {
+        if (!function_exists('posix_isatty') || !@posix_isatty($this->inputStream)) {
+            return;
+        }
+
+        if (is_string($this->sttyMode) && trim($this->sttyMode) !== '') {
+            shell_exec(sprintf('stty %s', escapeshellarg(trim($this->sttyMode))));
+            return;
+        }
+
+        shell_exec('stty icanon echo');
+    }
+
+    /**
+     * @param resource|mixed $inputStream
+     */
+    private static function captureSttyMode($inputStream): string|null|false
+    {
+        if (!self::isStreamResource($inputStream)
+            || !function_exists('posix_isatty')
+            || !@posix_isatty($inputStream)
+        ) {
+            return null;
+        }
+
+        $sttyMode = shell_exec('stty -g');
+        if (!is_string($sttyMode) || trim($sttyMode) === '') {
+            return $sttyMode;
+        }
+
+        shell_exec('stty -icanon -echo');
+        return $sttyMode;
+    }
+
+    /**
+     * @param resource|mixed $stream
+     */
+    private static function isStreamResource($stream): bool
+    {
+        return is_resource($stream) && get_resource_type($stream) === 'stream';
+    }
+
+    /**
+     * @param resource|mixed $stream
+     */
+    private static function setBlockingIfPossible($stream, bool $shouldBlock): bool
+    {
+        if (!self::isStreamResource($stream)) {
+            return false;
+        }
+
+        try {
+            return stream_set_blocking($stream, $shouldBlock);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

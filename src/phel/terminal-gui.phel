@@ -8,74 +8,101 @@
   []
   (php/:: TerminalGui (getInstance php/STDIN)))
 
-(defn add-output-formatter [{:style-name style-name
-                             :foreground foreground
-                             :background background
-                             :options options}]
-  (php/-> (get-gui) (addOutputFormatter
-                     style-name
-                     (php/new OutputFormatterStyle
-                              foreground
-                              background
-                              (to-php-array (or options []))))))
-
-(defn read-input
-  "Reads the input stream and returns it in different formats."
-  [length]
-  (let [raw (php/fread php/STDIN length)
-        hex (php/bin2hex raw)]
-    {:raw raw :hex hex}))
-
-(defn clear-screen
-  "Clears the entire screen."
-  []
-  (php/-> (get-gui) (clearScreen)))
-
-(defn clear-output
-  "Clears all the output from the cursors' current position to the end of the screen."
-  []
-  (php/-> (get-gui) (clearOutput)))
-
-(defn clear-line
-  "Clears the output from the line."
-  [line]
-  (php/-> (get-gui) (clearLine line)))
+(defmacro- gui-call
+  "Invokes a method chain on the singleton GUI instance."
+  [& forms]
+  `(php/-> (get-gui) ~@forms))
 
 (defn- make-border-style
   [border-style]
-  (let [{:horizontal ch :vertical cv :corner cc} (or border-style {})]
-    (php/:: BorderStyle (withChars ch cv cc))))
+  (let [{:keys [horizontal vertical corner]} (or border-style {})]
+    (php/:: BorderStyle (withChars horizontal vertical corner))))
+
+(defn add-output-formatter
+  "Registers a named output formatter style."
+  {:example "(add-output-formatter {:style-name \"error\" :foreground \"red\" :options [\"bold\"]})"}
+  [{:keys [style-name foreground background options]
+    :or {options []}}]
+  (gui-call (addOutputFormatter
+             style-name
+             (php/new OutputFormatterStyle
+                      foreground
+                      background
+                      (to-php-array options)))))
+
+(defn read-input
+  "Reads the input stream and returns it in different formats."
+  {:example "(read-input 3) ; => {:raw \"a\" :hex \"61\"}"}
+  [length]
+  (let [raw (php/fread php/STDIN length)]
+    {:raw raw :hex (php/bin2hex raw)}))
+
+(defn clear-screen
+  "Clears the entire screen."
+  {:see-also ["clear-output" "clear-line"]}
+  []
+  (gui-call (clearScreen)))
+
+(defn clear-output
+  "Clears all output from the cursor's current position to the end of the screen."
+  {:see-also ["clear-screen" "clear-line"]}
+  []
+  (gui-call (clearOutput)))
+
+(defn clear-line
+  "Clears the output from the line."
+  {:example "(clear-line 3)"
+   :see-also ["clear-screen" "clear-output"]}
+  [line]
+  (gui-call (clearLine line)))
 
 (defn render-board
   "Renders the borders of a board."
-  [{:width w :height h} & [border-style]]
-  (php/-> (get-gui) (renderBoard w h (make-border-style border-style))))
+  {:example "(render-board {:width 10 :height 5})"
+   :see-also ["draw-box"]}
+  ([dims] (render-board dims nil))
+  ([{:keys [width height]} border-style]
+   (gui-call (renderBoard width height (make-border-style border-style)))))
 
 (defn render
   "Render any text to a concrete position (x,y) in the terminal."
-  [x y text & [style]]
-  (php/-> (get-gui) (render x y text (or style ""))))
+  {:example "(render 0 0 \"Hello\" \"info\")"
+   :see-also ["render-text-block"]}
+  ([x y text] (render x y text ""))
+  ([x y text style]
+   (gui-call (render x y text style))))
 
 (defn render-text-block
   "Render multiline text at a specific position."
-  [x y text & [style]]
-  (php/-> (get-gui) (renderTextBlock x y text (or style ""))))
+  {:example "(render-text-block 0 0 \"line-1\\nline-2\")"
+   :see-also ["render"]}
+  ([x y text] (render-text-block x y text ""))
+  ([x y text style]
+   (gui-call (renderTextBlock x y text style))))
 
 (defn draw-horizontal-line
   "Draw a horizontal line using a given character."
-  [x y length char & [style]]
-  (php/-> (get-gui) (drawHorizontalLine x y length char (or style ""))))
+  {:example "(draw-horizontal-line 0 0 10 \"-\")"
+   :see-also ["draw-vertical-line" "draw-box"]}
+  ([x y length char] (draw-horizontal-line x y length char ""))
+  ([x y length char style]
+   (gui-call (drawHorizontalLine x y length char style))))
 
 (defn draw-vertical-line
   "Draw a vertical line using a given character."
-  [x y length char & [style]]
-  (php/-> (get-gui) (drawVerticalLine x y length char (or style ""))))
+  {:example "(draw-vertical-line 0 0 5 \"|\")"
+   :see-also ["draw-horizontal-line" "draw-box"]}
+  ([x y length char] (draw-vertical-line x y length char ""))
+  ([x y length char style]
+   (gui-call (drawVerticalLine x y length char style))))
 
 (defn draw-box
   "Draw a box at a given position with optional fill and border styles."
-  [{:x x :y y :width width :height height :border border :fill-char fill-char}]
-  (php/-> (get-gui)
-          (drawBox x y width height (make-border-style border) (or fill-char " "))))
+  {:example "(draw-box {:x 0 :y 0 :width 10 :height 5 :fill-char \".\"})"
+   :see-also ["render-board" "draw-horizontal-line" "draw-vertical-line"]}
+  [{:keys [x y width height border fill-char]
+    :or {fill-char \space}}]
+  (gui-call (drawBox x y width height (make-border-style border) fill-char)))
 
 (defn cleanup-gui
   "Cleanup the GUI singleton instance."
