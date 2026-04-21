@@ -214,7 +214,12 @@ final class TerminalGuiTest extends TestCase
     {
         TerminalGui::resetInstance();
 
-        $a = TerminalGui::getInstance($this->inputStream);
+        $a = TerminalGui::getInstance(
+            $this->inputStream,
+            $this->output,
+            new Cursor($this->output),
+            false,
+        );
         $b = TerminalGui::getInstance($this->inputStream);
 
         self::assertSame($a, $b);

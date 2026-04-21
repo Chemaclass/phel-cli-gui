@@ -16,9 +16,18 @@ final class TerminalGui
     private bool $cleanedUp = false;
     private static ?self $instance = null;
 
-    public static function getInstance($inputStream = STDIN): self
-    {
-        return self::$instance ??= self::withStream($inputStream);
+    public static function getInstance(
+        $inputStream = STDIN,
+        ?OutputInterface $output = null,
+        ?Cursor $cursor = null,
+        bool $registerShutdownHandlers = true,
+    ): self {
+        return self::$instance ??= self::withStream(
+            $inputStream,
+            $output,
+            $cursor,
+            $registerShutdownHandlers,
+        );
     }
 
     public static function withStream(
