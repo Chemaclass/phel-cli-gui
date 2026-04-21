@@ -7,29 +7,36 @@
 (defn- get-gui
   "Gets the singleton GUI instance."
   []
-  (php/:: TerminalGui (getInstance php/STDIN)))
-
-(defmacro- gui-call
-  "Invokes a method chain on the singleton GUI instance."
-  [& forms]
-  `(php/-> (get-gui) ~@forms))
+  (TerminalGui/getInstance php/STDIN))
 
 (defn- make-border-style
   [border-style]
   (let [{:keys [horizontal vertical corner]} (or border-style {})]
-    (php/:: BorderStyle (withChars horizontal vertical corner))))
+    (BorderStyle/withChars horizontal vertical corner)))
+
+(def- key-map
+  {"1b5b41" :up
+   "1b5b42" :down
+   "1b5b43" :right
+   "1b5b44" :left
+   "0d"     :enter
+   "0a"     :enter
+   "1b"     :escape
+   "09"     :tab
+   "7f"     :backspace
+   "08"     :backspace})
 
 (defn add-output-formatter
   "Registers a named output formatter style."
   {:example "(add-output-formatter {:style-name \"error\" :foreground \"red\" :options [\"bold\"]})"}
   [{:keys [style-name foreground background options]
     :or {options []}}]
-  (gui-call (addOutputFormatter
-             style-name
-             (php/new OutputFormatterStyle
-                      foreground
-                      background
-                      (to-php-array options)))))
+  (.addOutputFormatter (get-gui)
+                       style-name
+                       (new OutputFormatterStyle
+                            foreground
+                            background
+                            (to-php-array options))))
 
 (defn read-input
   "Reads the input stream and returns it in different formats."
@@ -45,19 +52,8 @@
   {:example "(parse-key {:raw \"\\r\" :hex \"0d\"}) ; => :enter"
    :see-also ["read-key" "read-input"]}
   [{:keys [raw hex]}]
-  (case hex
-    "" nil
-    "1b5b41" :up
-    "1b5b42" :down
-    "1b5b43" :right
-    "1b5b44" :left
-    "0d" :enter
-    "0a" :enter
-    "1b" :escape
-    "09" :tab
-    "7f" :backspace
-    "08" :backspace
-    {:char raw}))
+  (when-not (= "" hex)
+    (get key-map hex {:char raw})))
 
 (defn read-key
   "Reads one key press from stdin and returns a key keyword or {:char c}.
@@ -70,9 +66,9 @@
   "Returns the current terminal dimensions as {:width w :height h}."
   {:example "(terminal-size) ; => {:width 120 :height 40}"}
   []
-  (let [term (php/new Terminal)]
-    {:width (php/-> term (getWidth))
-     :height (php/-> term (getHeight))}))
+  (let [term (new Terminal)]
+    {:width  (.getWidth term)
+     :height (.getHeight term)}))
 
 (defn max-bounds
   "Returns the maximum (x,y) extent reached by render/draw operations
@@ -80,39 +76,39 @@
   {:see-also ["render" "draw-box"]}
   []
   (let [gui (get-gui)]
-    {:width (php/-> gui (getMaxWidth))
-     :height (php/-> gui (getMaxHeight))}))
+    {:width  (.getMaxWidth gui)
+     :height (.getMaxHeight gui)}))
 
 (defn hide-cursor
   "Hides the terminal cursor."
   {:see-also ["show-cursor"]}
   []
-  (gui-call (hideCursor)))
+  (.hideCursor (get-gui)))
 
 (defn show-cursor
   "Shows the terminal cursor (hidden by default after init)."
   {:see-also ["hide-cursor"]}
   []
-  (gui-call (showCursor)))
+  (.showCursor (get-gui)))
 
 (defn clear-screen
   "Clears the entire screen."
   {:see-also ["clear-output" "clear-line"]}
   []
-  (gui-call (clearScreen)))
+  (.clearScreen (get-gui)))
 
 (defn clear-output
   "Clears all output from the cursor's current position to the end of the screen."
   {:see-also ["clear-screen" "clear-line"]}
   []
-  (gui-call (clearOutput)))
+  (.clearOutput (get-gui)))
 
 (defn clear-line
   "Clears the output from the line."
   {:example "(clear-line 3)"
    :see-also ["clear-screen" "clear-output"]}
   [line]
-  (gui-call (clearLine line)))
+  (.clearLine (get-gui) line))
 
 (defn render-board
   "Renders the borders of a board."
@@ -120,7 +116,7 @@
    :see-also ["draw-box"]}
   ([dims] (render-board dims nil))
   ([{:keys [width height]} border-style]
-   (gui-call (renderBoard width height (make-border-style border-style)))))
+   (.renderBoard (get-gui) width height (make-border-style border-style))))
 
 (defn render
   "Render any text to a concrete position (x,y) in the terminal."
@@ -128,7 +124,7 @@
    :see-also ["render-text-block"]}
   ([x y text] (render x y text ""))
   ([x y text style]
-   (gui-call (render x y text style))))
+   (.render (get-gui) x y text style)))
 
 (defn render-text-block
   "Render multiline text at a specific position."
@@ -136,7 +132,7 @@
    :see-also ["render"]}
   ([x y text] (render-text-block x y text ""))
   ([x y text style]
-   (gui-call (renderTextBlock x y text style))))
+   (.renderTextBlock (get-gui) x y text style)))
 
 (defn draw-horizontal-line
   "Draw a horizontal line using a given character."
@@ -144,7 +140,7 @@
    :see-also ["draw-vertical-line" "draw-box"]}
   ([x y length char] (draw-horizontal-line x y length char ""))
   ([x y length char style]
-   (gui-call (drawHorizontalLine x y length char style))))
+   (.drawHorizontalLine (get-gui) x y length char style)))
 
 (defn draw-vertical-line
   "Draw a vertical line using a given character."
@@ -152,7 +148,7 @@
    :see-also ["draw-horizontal-line" "draw-box"]}
   ([x y length char] (draw-vertical-line x y length char ""))
   ([x y length char style]
-   (gui-call (drawVerticalLine x y length char style))))
+   (.drawVerticalLine (get-gui) x y length char style)))
 
 (defn fill-region
   "Paints an area with a fill character, without any border."
@@ -160,7 +156,7 @@
    :see-also ["draw-box" "clear-output"]}
   [{:keys [x y width height fill-char]
     :or {fill-char \space}}]
-  (gui-call (fillRegion x y width height fill-char)))
+  (.fillRegion (get-gui) x y width height fill-char))
 
 (defn draw-box
   "Draw a box at a given position with optional fill and border styles."
@@ -168,9 +164,9 @@
    :see-also ["render-board" "fill-region" "draw-horizontal-line" "draw-vertical-line"]}
   [{:keys [x y width height border fill-char]
     :or {fill-char \space}}]
-  (gui-call (drawBox x y width height (make-border-style border) fill-char)))
+  (.drawBox (get-gui) x y width height (make-border-style border) fill-char))
 
 (defn cleanup-gui
   "Cleanup the GUI singleton instance."
   []
-  (php/:: TerminalGui (resetInstance)))
+  (TerminalGui/resetInstance))
