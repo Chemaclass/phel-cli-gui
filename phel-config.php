@@ -6,13 +6,7 @@ use Phel\Config\PhelBuildConfig;
 use Phel\Config\PhelConfig;
 
 return (new PhelConfig())
-    ->setSrcDirs(['src/phel/'])
-    ->setTestDirs(['tests/phel/'])
-    ->setVendorDir('vendor')
-    ->setFormatDirs(['src', 'tests'])
+    ->useNestedLayout()
     ->setBuildConfig((new PhelBuildConfig())
         ->setMainPhpPath('out/main.php')
-        ->setMainPhelNamespace('phel-cli-gui\terminal-gui'))
-    ->setIgnoreWhenBuilding(['local.phel', 'test-keyboard.phel'])
-    ->setKeepGeneratedTempFiles(false)
-;
+        ->setMainPhelNamespace('phel-cli-gui\terminal-gui'));
