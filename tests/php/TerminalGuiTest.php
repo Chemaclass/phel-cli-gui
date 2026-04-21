@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace PhelCliGui\Tests;
 
 use InvalidArgumentException;
+use PhelCliGui\BorderStyle;
 use PhelCliGui\TerminalGui;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Cursor;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -136,5 +138,85 @@ final class TerminalGuiTest extends TestCase
         $content = $this->output->fetch();
         self::assertStringContainsString('+--+', $content);
         self::assertStringContainsString('|  |', $content);
+    }
+
+    public function test_render_board_accepts_custom_border_style(): void
+    {
+        $this->gui->renderBoard(3, 2, BorderStyle::withChars('=', '!', '*'));
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString('*=*', $content);
+    }
+
+    public function test_draw_box_writes_fill_inside_borders(): void
+    {
+        $this->gui->drawBox(0, 0, 5, 4, BorderStyle::withChars('-', '|', '+'), '.');
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString('+---+', $content);
+        self::assertStringContainsString('|...|', $content);
+        self::assertSame(4, $this->gui->getMaxWidth());
+        self::assertSame(3, $this->gui->getMaxHeight());
+    }
+
+    public function test_draw_horizontal_line_writes_repeating_character(): void
+    {
+        $this->gui->drawHorizontalLine(1, 2, 6, '-');
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString('------', $content);
+        self::assertSame(1 + 6 - 1, $this->gui->getMaxWidth());
+        self::assertSame(2, $this->gui->getMaxHeight());
+    }
+
+    public function test_clear_screen_emits_ansi_clear_sequence(): void
+    {
+        $this->gui->clearScreen();
+
+        self::assertStringContainsString("\033[2J", $this->output->fetch());
+    }
+
+    public function test_clear_output_emits_ansi_clear_output_sequence(): void
+    {
+        $this->gui->clearOutput();
+
+        self::assertStringContainsString("\033[0J", $this->output->fetch());
+    }
+
+    public function test_clear_line_moves_to_row_and_clears(): void
+    {
+        $this->gui->clearLine(3);
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString("\033[4;0H", $content);
+        self::assertStringContainsString("\033[2K", $content);
+    }
+
+    public function test_add_output_formatter_applies_style_to_named_tag(): void
+    {
+        $this->gui->addOutputFormatter('danger', new OutputFormatterStyle('red', null, ['bold']));
+        $this->gui->render(0, 0, 'boom', 'danger');
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString("\033[31;1mboom\033[39;22m", $content);
+    }
+
+    public function test_render_without_style_writes_plain_text(): void
+    {
+        $this->gui->render(0, 0, 'plain', '');
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString('plain', $content);
+        self::assertStringNotContainsString("<", $content);
+    }
+
+    public function test_get_instance_returns_shared_singleton(): void
+    {
+        TerminalGui::resetInstance();
+
+        $a = TerminalGui::getInstance($this->inputStream);
+        $b = TerminalGui::getInstance($this->inputStream);
+
+        self::assertSame($a, $b);
     }
 }
