@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fd2a5c2931587609442654d6b92c65f2",
+    "content-hash": "3b0fa5891d23e3dff4c483709af5f56a",
     "packages": [
         {
             "name": "amphp/amp",
@@ -243,22 +243,22 @@
         },
         {
             "name": "phel-lang/phel-lang",
-            "version": "v0.34.1",
+            "version": "v0.36.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phel-lang/phel-lang.git",
-                "reference": "3c4bfb2c91cf08af552713f2159d0dac491a223d"
+                "reference": "303d12316cf8b1e72c9e29191018c2bc13d4a0d3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/3c4bfb2c91cf08af552713f2159d0dac491a223d",
-                "reference": "3c4bfb2c91cf08af552713f2159d0dac491a223d",
+                "url": "https://api.github.com/repos/phel-lang/phel-lang/zipball/303d12316cf8b1e72c9e29191018c2bc13d4a0d3",
+                "reference": "303d12316cf8b1e72c9e29191018c2bc13d4a0d3",
                 "shasum": ""
             },
             "require": {
                 "amphp/amp": "^3.1",
                 "gacela-project/gacela": "^1.14",
-                "php": ">=8.3",
+                "php": ">=8.4",
                 "symfony/console": "^6.0|^7.0|^8.0",
                 "symfony/routing": "^7.3"
             },
@@ -311,7 +311,7 @@
             ],
             "support": {
                 "issues": "https://github.com/phel-lang/phel-lang/issues",
-                "source": "https://github.com/phel-lang/phel-lang/tree/v0.34.1"
+                "source": "https://github.com/phel-lang/phel-lang/tree/v0.36.0"
             },
             "funding": [
                 {
@@ -319,7 +319,7 @@
                     "type": "custom"
                 }
             ],
-            "time": "2026-04-20T22:39:15+00:00"
+            "time": "2026-05-08T06:40:37+00:00"
         },
         {
             "name": "psr/container",
@@ -4209,7 +4209,7 @@
     },
     "platform-dev": {},
     "platform-overrides": {
-        "php": "8.3"
+        "php": "8.4"
     },
     "plugin-api-version": "2.9.0"
 }
