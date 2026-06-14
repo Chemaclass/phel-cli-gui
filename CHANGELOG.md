@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Support for `phel-lang/phel-lang` `^0.44`.
+
+### Changed
+- Modernized `phel-config.php` to the non-deprecated `withLayout`/`withBuildConfig` builder API.
+
 ## [0.10.0] - 2026-05-08
 
 ### Changed
