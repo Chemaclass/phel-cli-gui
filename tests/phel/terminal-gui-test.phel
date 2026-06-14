@@ -1,6 +1,6 @@
-(ns phel-cli-gui-test\terminal-gui-test
-  (:require phel\test :refer [deftest is testing])
-  (:require phel-cli-gui\terminal-gui :refer [parse-key]))
+(ns phel-cli-gui-test.terminal-gui-test
+  (:require phel.test :refer [deftest is testing])
+  (:require phel-cli-gui.terminal-gui :refer [parse-key]))
 
 ;; Pure-logic tests. GUI-side-effect functions are exercised from PHP.
 

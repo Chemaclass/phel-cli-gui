@@ -10,4 +10,4 @@ return (new PhelConfig())
     ->withLayout(ProjectLayout::Nested)
     ->withBuildConfig((new PhelBuildConfig())
         ->withMainPhpPath('out/main.php')
-        ->withMainPhelNamespace('phel-cli-gui\terminal-gui'));
+        ->withMainPhelNamespace('phel-cli-gui.terminal-gui'));
