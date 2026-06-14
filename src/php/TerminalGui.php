@@ -276,7 +276,7 @@ final class TerminalGui
                     $cursor->moveToPosition($x, $y);
                 }
 
-                $buffer->write($this->decorate($run['text'], $run['style']));
+                $this->writeStyled($buffer, $run['text'], $run['style']);
 
                 $curRow = $y;
                 $curColumn = $x + self::runWidth($run['text']);
@@ -439,12 +439,23 @@ final class TerminalGui
 
     private function write(string $text, ?string $style = ''): void
     {
-        $this->activeOutput()->write($this->decorate($text, $style));
+        $this->writeStyled($this->activeOutput(), $text, $style);
     }
 
-    private function decorate(string $text, ?string $style): string
+    /**
+     * Writes text to an output, wrapping it in the named style only when one is
+     * given. Unstyled text goes out raw — skipping the formatter's tag parse,
+     * which is both faster and keeps literal '<...>' in user text intact
+     * instead of having it swallowed as a markup tag.
+     */
+    private function writeStyled(OutputInterface $output, string $text, ?string $style): void
     {
-        return ($style === null || $style === '') ? $text : "<$style>$text</$style>";
+        if ($style === null || $style === '') {
+            $output->write($text, false, OutputInterface::OUTPUT_RAW);
+            return;
+        }
+
+        $output->write("<$style>$text</$style>");
     }
 
     /** Columns a diff run advances the cursor: one cell per codepoint. */

@@ -15,9 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cursor: `move-cursor`, `cursor-home` for flicker-free overwrite-in-place repaints.
 - Input: `read-available` drains all pending bytes in one read for held-key responsiveness.
 
+### Fixed
+- Unstyled text is now written raw, so literal `<...>` in rendered content is emitted verbatim instead of being parsed (and swallowed) as a Symfony markup tag.
+
 ### Performance
 - `parse-key`: skip fallback-map allocation on known-key hits.
 - Frames coalesce the trailing cursor "park" move: a buffered frame emits one cursor move at `end-frame` instead of one per draw, trimming the redundant escape sequences from the single flush (≈39 fewer per 40-row repaint).
+- Diff `present` repositions runs with relative cursor moves: adjacent runs emit no move and same-row gaps a short `\e[nC`, falling back to an absolute jump only on a row change (a row of 40 adjacent styled runs drops from 40 cursor moves to 1).
+- Unstyled draws skip the output formatter's tag parse (written raw), trimming per-write overhead on background fills and plain text.
 
 ## [0.11.0] - 2026-06-14
 

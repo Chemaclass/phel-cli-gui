@@ -210,6 +210,25 @@ final class TerminalGuiTest extends TestCase
         self::assertStringNotContainsString("<", $content);
     }
 
+    public function test_unstyled_text_keeps_literal_angle_brackets(): void
+    {
+        // Without a style the text is written raw, so markup-looking content is
+        // emitted verbatim instead of being parsed (and swallowed) as a tag.
+        $this->gui->render(0, 0, '<not-a-tag>');
+
+        self::assertStringContainsString('<not-a-tag>', $this->output->fetch());
+    }
+
+    public function test_unstyled_diff_run_keeps_literal_angle_brackets(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, '<x>');
+        $this->gui->present();
+
+        self::assertStringContainsString('<x>', $this->output->fetch());
+        $this->gui->endDiff();
+    }
+
     public function test_get_instance_returns_shared_singleton(): void
     {
         TerminalGui::resetInstance();
