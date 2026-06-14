@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Frame batching: `begin-frame`, `end-frame`, and the `with-frame` macro buffer
+  all draws within a frame and flush them to the terminal in a single write
+  (one write per frame instead of one per draw call). Output is byte-identical
+  to immediate mode; immediate mode remains the default.
+- `perf` win: `parse-key` no longer allocates the `{:char raw}` fallback map on
+  known-key hits.
+
 ## [0.11.0] - 2026-06-14
 
 ### Changed

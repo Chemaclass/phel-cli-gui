@@ -63,6 +63,27 @@ Recognised keys: `:up` `:down` `:left` `:right` `:enter` `:escape` `:tab`
 `:fill-char` and border chars default to single-byte ASCII (`" "`, `-`, `|`, `+`).
 Multibyte characters (`─`, `│`, `┼`) are supported.
 
+## Frame batching
+
+By default every draw call writes to stdout immediately — one `write` per call.
+For draw-heavy redraws (e.g. a game loop repainting a board each tick), wrap the
+draws in a frame so they accumulate and flush in a **single** write.
+
+| Function | Effect |
+|---|---|
+| `(begin-frame)` | Start buffering draws. Nestable — only the outermost `end-frame` flushes. |
+| `(end-frame)` | Flush the buffered frame in one write. No-op when no frame is open. |
+| `(with-frame & body)` | Macro: run `body` inside a frame, flushing once on completion (even on throw). |
+
+```phel
+(with-frame
+  (clear-screen)
+  (draw-box {:x 0 :y 0 :width 20 :height 8})
+  (render 2 2 "Score: 42"))
+```
+
+Output is byte-identical to immediate mode; only the number of writes changes.
+
 ## Styling
 
 Register a named style once, then pass the name to any rendering call that
