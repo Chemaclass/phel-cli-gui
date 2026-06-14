@@ -18,6 +18,7 @@ local.phel
 /.agnostic-ai/AGNOSTIC_AI.md
 /.agnostic-ai/packs/
 /.claude/
+/.codex/
 /AGENTS.md
 /CLAUDE.md
 /agnostic-ai.local.yaml
