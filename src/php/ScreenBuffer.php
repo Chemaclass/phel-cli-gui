@@ -32,9 +32,7 @@ final class ScreenBuffer
             throw new InvalidArgumentException('Screen buffer dimensions must be at least 1.');
         }
 
-        $size = $width * $height;
-        $this->chars = array_fill(0, $size, ' ');
-        $this->styles = array_fill(0, $size, null);
+        $this->clear();
     }
 
     public function width(): int
@@ -70,12 +68,12 @@ final class ScreenBuffer
         $base = $row * $this->width;
 
         foreach (Text::graphemes($text) as $offset => $glyph) {
-            $column_ = $column + $offset;
-            if ($column_ < 0 || $column_ >= $this->width) {
+            $cellColumn = $column + $offset;
+            if ($cellColumn < 0 || $cellColumn >= $this->width) {
                 continue;
             }
 
-            $idx = $base + $column_;
+            $idx = $base + $cellColumn;
             $this->chars[$idx] = $glyph;
             $this->styles[$idx] = $normalizedStyle;
         }
@@ -137,13 +135,12 @@ final class ScreenBuffer
         return $runs;
     }
 
-    /** Returns an independent copy of the current cell state. */
+    /**
+     * Returns an independent copy of the current cell state. Cheap: the cell
+     * arrays share storage copy-on-write until either buffer is next mutated.
+     */
     public function snapshot(): self
     {
-        $copy = new self($this->width, $this->height);
-        $copy->chars = $this->chars;
-        $copy->styles = $this->styles;
-
-        return $copy;
+        return clone $this;
     }
 }

@@ -1,4 +1,5 @@
 (ns phel-cli-gui.terminal-gui
+  (:require phel.string :refer [join])
   (:use PhelCliGui.TerminalGui)
   (:use PhelCliGui.BorderStyle)
   (:use Symfony.Component.Console.Formatter.OutputFormatterStyle)
@@ -50,9 +51,6 @@
 
 (defn- present? [x] (not (nil? x)))
 
-(defn- join-sgr [parts]
-  (reduce (fn [acc p] (if (= acc "") p (str acc ";" p))) "" parts))
-
 (defn color->sgr
   "Pure helper: builds an ANSI SGR parameter string from a colour spec.
   Accepts :fg-256/:bg-256 (0-255 xterm palette index), :fg-rgb/:bg-rgb
@@ -61,13 +59,12 @@
    :see-also ["add-color"]}
   [{:keys [fg-256 bg-256 fg-rgb bg-rgb options]
     :or {options []}}]
-  (let [color-parts (filter present?
-                            [(when fg-256 (str "38;5;" fg-256))
-                             (when bg-256 (str "48;5;" bg-256))
-                             (when fg-rgb (str "38;2;" (get fg-rgb 0) ";" (get fg-rgb 1) ";" (get fg-rgb 2)))
-                             (when bg-rgb (str "48;2;" (get bg-rgb 0) ";" (get bg-rgb 1) ";" (get bg-rgb 2)))])
-        opt-parts   (filter present? (map (fn [o] (get sgr-option-codes o)) options))]
-    (join-sgr (concat color-parts opt-parts))))
+  (let [color-parts [(when fg-256 (str "38;5;" fg-256))
+                     (when bg-256 (str "48;5;" bg-256))
+                     (when fg-rgb (str "38;2;" (get fg-rgb 0) ";" (get fg-rgb 1) ";" (get fg-rgb 2)))
+                     (when bg-rgb (str "48;2;" (get bg-rgb 0) ";" (get bg-rgb 1) ";" (get bg-rgb 2)))]
+        opt-parts   (map (fn [o] (get sgr-option-codes o)) options)]
+    (join ";" (filter present? (concat color-parts opt-parts)))))
 
 (defn add-color
   "Registers a named 256-colour / truecolor style usable in any render call,
