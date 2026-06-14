@@ -11,14 +11,31 @@ Short patterns for common tasks. See [api.md](api.md) for the full reference.
     (recur (step state (read-key)))))
 ```
 
+## Flicker-free full-screen loop (diff rendering)
+
+Repaint the back-buffer each frame; `present` writes only the cells that
+changed. See [api.md](api.md#diff-rendering).
+
+```phel
+(with-screen                             ; alt screen, cursor hidden
+  (with-diff (terminal-size)
+    (loop [n 0]
+      (clear-buffer)
+      (draw-box {:x 0 :y 0 :width 40 :height 12 :border :rounded})
+      (render 2 2 (str "Frame " n))
+      (present)                          ; minimal repaint
+      (when-not (= {:char "q"} (read-key))
+        (php/usleep 16000)
+        (recur (inc n))))))
+```
+
 ## Bordered UI with colors
 
 ```phel
 (add-output-formatter {:style-name "title"  :foreground "cyan"  :options ["bold"]})
 (add-output-formatter {:style-name "accent" :foreground "green"})
 
-(draw-box {:x 0 :y 0 :width 40 :height 10
-           :border {:horizontal "─" :vertical "│" :corner "┼"}})
+(draw-box {:x 0 :y 0 :width 40 :height 10 :border :double})
 (render 2 1 "Dashboard" "title")
 (render 2 3 "online"    "accent")
 ```

@@ -61,7 +61,7 @@ vendor/bin/phel run src/phel/hello.phel
 ## Docs
 
 - [API reference](docs/api.md) — every public function, grouped by concern.
-- [Recipes](docs/recipes.md) — copy-paste patterns for common UIs.
+- [Recipes](docs/recipes.md) — copy-paste patterns (diff loop, bordered UI, …).
 
 ## Example projects
 
@@ -71,69 +71,20 @@ vendor/bin/phel run src/phel/hello.phel
 
 ```bash
 composer install
-composer test          # Phel tests + PHPUnit
-composer test:phel     # Phel tests only
-composer test:php      # PHPUnit only
-composer format        # phel format
+composer test     # Phel tests + PHPUnit (test:phel / test:php to scope)
+composer format   # phel format
 ```
 
-Coverage:
+Layout: `src/phel/` public API · `src/php/` rendering core (Symfony Console
+wrapper + pure helpers) · `tests/` Phel, PHPUnit & bashunit suites · `tools/`
+release automation.
 
-```bash
-XDEBUG_MODE=coverage vendor/bin/phpunit tests \
-  --coverage-text --coverage-filter=src/php
-```
+Cut a release with `tools/release.sh <version>` (add `--dry-run` to preview) —
+it gates, rolls the CHANGELOG, tags, pushes, and publishes the GitHub release.
 
-Layout:
-
-```
-src/
-  phel/terminal-gui.phel    Public Phel API
-  php/
-    TerminalGui.php         Symfony Console wrapper + singleton
-    TerminalCanvas.php      Box / line geometry (pure)
-    BorderStyle.php         Border-character value object (pure)
-    Text.php                First-char / display-width helpers (pure)
-tests/
-  phel/                     Phel pure-logic tests
-  php/                      PHPUnit tests exercising the rendering layer
-```
-
-## Releasing
-
-Cutting a release is a single command — it runs the quality gate, rolls the
-`CHANGELOG.md` `[Unreleased]` section into a dated version (and updates the
-compare-link references), commits, tags, pushes, and creates the GitHub release:
-
-```bash
-tools/release.sh 0.12.0            # full release
-tools/release.sh 0.12.0 --dry-run  # preview: gate + CHANGELOG diff + notes, no writes
-```
-
-Run it from a clean, up-to-date `main`. Requires `gh` authenticated. The tag is
-signed when a `user.signingkey` is configured.
-
-The script's pure helpers (version validation, CHANGELOG roll, notes
-extraction) live in `tools/release_lib.sh` and are covered by
-[bashunit](https://bashunit.typedevs.com) tests in `tests/bash/`, run in CI:
-
-```bash
-bashunit tests/bash
-```
-
-## AI assistant config
-
-AI-assistant instructions are managed with [agnostic-ai](https://github.com/Chemaclass/agnostic-ai):
-the single source of truth lives under `.agnostic-ai/` and is transpiled to each
-tool's native files (`CLAUDE.md`, `AGENTS.md`, `.claude/…`), which are generated
-and git-ignored.
-
-```bash
-agnostic-ai sync          # regenerate per-target files after editing specs
-agnostic-ai sync --check  # CI gate: fail if outputs drift from specs
-```
-
-Edit specs in `.agnostic-ai/`, never the generated files.
+AI-assistant config is managed with [agnostic-ai](https://github.com/Chemaclass/agnostic-ai):
+edit the source under `.agnostic-ai/`, run `agnostic-ai sync`; the per-tool
+files (`CLAUDE.md`, `.claude/…`) are generated and git-ignored.
 
 ## License
 
