@@ -16,32 +16,14 @@ final class TerminalGui
     private int $maxHeight = 0;
     private bool $cleanedUp = false;
 
-    /**
-     * When a frame is open, draws are accumulated here and flushed to the real
-     * output in a single write by endFrame(). Null in immediate mode.
-     */
-    private ?BufferedOutput $frameBuffer = null;
-    private ?Cursor $frameCursor = null;
-    private int $frameDepth = 0;
-
-    /**
-     * Set by a draw inside an open frame to request the trailing
-     * "park the cursor at max-bounds" move. Within a frame the move is
-     * coalesced — emitted once by endFrame() instead of once per draw —
-     * so the single flush carries one cursor move, not one per call.
-     */
-    private bool $framePendingFinalize = false;
-
     /** Whether the alternate screen buffer is currently active. */
     private bool $inAltScreen = false;
 
-    /**
-     * Double-buffered diff rendering. While a diff session is open, draw verbs
-     * paint into $diffBack instead of emitting cursor moves; present() writes
-     * only the cells that changed since $diffFront (the last presented frame).
-     */
-    private ?ScreenBuffer $diffBack = null;
-    private ?ScreenBuffer $diffFront = null;
+    /** Batches a frame's draws into one write (see FrameSession). */
+    private readonly FrameSession $frame;
+
+    /** Double-buffered cell diffing (see DiffSession). */
+    private readonly DiffSession $diff;
 
     private static ?self $instance = null;
 
@@ -95,6 +77,8 @@ final class TerminalGui
         private readonly Cursor $cursor,
         private string|null|false $sttyMode,
     ) {
+        $this->frame = new FrameSession();
+        $this->diff = new DiffSession();
     }
 
     public function __destruct()
@@ -170,17 +154,7 @@ final class TerminalGui
      */
     public function beginFrame(): void
     {
-        if ($this->frameDepth++ > 0) {
-            return;
-        }
-
-        $this->framePendingFinalize = false;
-        $this->frameBuffer = new BufferedOutput(
-            $this->output->getVerbosity(),
-            $this->output->isDecorated(),
-            $this->output->getFormatter(),
-        );
-        $this->frameCursor = new Cursor($this->frameBuffer);
+        $this->frame->begin($this->output);
     }
 
     /**
@@ -189,21 +163,10 @@ final class TerminalGui
      */
     public function endFrame(): void
     {
-        if ($this->frameDepth === 0 || --$this->frameDepth > 0) {
-            return;
-        }
+        $payload = $this->frame->end($this->maxWidth, $this->maxHeight);
 
-        if ($this->framePendingFinalize) {
-            $this->framePendingFinalize = false;
-            $this->frameCursor?->moveToPosition($this->maxWidth, $this->maxHeight);
-        }
-
-        $buffer = $this->frameBuffer?->fetch() ?? '';
-        $this->frameBuffer = null;
-        $this->frameCursor = null;
-
-        if ($buffer !== '') {
-            $this->output->write($buffer, false, OutputInterface::OUTPUT_RAW);
+        if ($payload !== null) {
+            $this->output->write($payload, false, OutputInterface::OUTPUT_RAW);
         }
     }
 
@@ -215,21 +178,19 @@ final class TerminalGui
      */
     public function beginDiff(int $width, int $height): void
     {
-        $this->diffBack = new ScreenBuffer($width, $height);
-        $this->diffFront = null;
+        $this->diff->begin($width, $height);
     }
 
     /** Closes the diff session and releases both buffers. */
     public function endDiff(): void
     {
-        $this->diffBack = null;
-        $this->diffFront = null;
+        $this->diff->end();
     }
 
     /** Resets the back-buffer to blank. No-op when no diff session is open. */
     public function clearBuffer(): void
     {
-        $this->diffBack?->clear();
+        $this->diff->clear();
     }
 
     /**
@@ -239,66 +200,59 @@ final class TerminalGui
      */
     public function present(): void
     {
-        $back = $this->diffBack;
-        if ($back === null) {
+        $runs = $this->diff->collectRuns();
+        if ($runs === []) {
             return;
         }
 
-        $previous = $this->diffFront ?? new ScreenBuffer($back->width(), $back->height());
-        $runs = $back->diff($previous);
+        $buffer = new BufferedOutput(
+            $this->output->getVerbosity(),
+            $this->output->isDecorated(),
+            $this->output->getFormatter(),
+        );
+        $cursor = new Cursor($buffer);
 
-        if ($runs !== []) {
-            $buffer = new BufferedOutput(
-                $this->output->getVerbosity(),
-                $this->output->isDecorated(),
-                $this->output->getFormatter(),
-            );
-            $cursor = new Cursor($buffer);
+        // Track the cursor's logical (column, row) so same-row runs reposition
+        // with a short relative move — or none at all when adjacent — instead
+        // of a full absolute jump. Writing a run advances the cursor to the end
+        // of its text, so the next same-row run starts from there. Runs arrive
+        // left-to-right top-to-bottom, so same-row gaps are always forward;
+        // only a row change falls back to an absolute move. (-1 = unknown: the
+        // real cursor position at present()-time is not tracked, so the first
+        // run is always absolute.)
+        $curColumn = -1;
+        $curRow = -1;
 
-            // Track the cursor's logical (column, row) so same-row runs reposition
-            // with a short relative move — or none at all when adjacent — instead
-            // of a full absolute jump. Writing a run advances the cursor to the end
-            // of its text, so the next same-row run starts from there. Runs arrive
-            // left-to-right top-to-bottom, so same-row gaps are always forward;
-            // only a row change falls back to an absolute move. (-1 = unknown: the
-            // real cursor position at present()-time is not tracked, so the first
-            // run is always absolute.)
-            $curColumn = -1;
-            $curRow = -1;
+        foreach ($runs as $run) {
+            $x = $run['x'];
+            $y = $run['y'];
 
-            foreach ($runs as $run) {
-                $x = $run['x'];
-                $y = $run['y'];
-
-                if ($y === $curRow && $x > $curColumn) {
-                    $cursor->moveRight($x - $curColumn);
-                } elseif ($y !== $curRow || $x !== $curColumn) {
-                    $cursor->moveToPosition($x, $y);
-                }
-
-                $this->writeStyled($buffer, $run['text'], $run['style']);
-
-                $curRow = $y;
-                $curColumn = $x + self::runWidth($run['text']);
+            if ($y === $curRow && $x > $curColumn) {
+                $cursor->moveRight($x - $curColumn);
+            } elseif ($y !== $curRow || $x !== $curColumn) {
+                $cursor->moveToPosition($x, $y);
             }
 
-            $out = $buffer->fetch();
-            if ($out !== '') {
-                $this->output->write($out, false, OutputInterface::OUTPUT_RAW);
-            }
+            $this->writeStyled($buffer, $run['text'], $run['style']);
+
+            $curRow = $y;
+            $curColumn = $x + self::runWidth($run['text']);
         }
 
-        $this->diffFront = $back->snapshot();
+        $out = $buffer->fetch();
+        if ($out !== '') {
+            $this->output->write($out, false, OutputInterface::OUTPUT_RAW);
+        }
     }
 
     private function activeCursor(): Cursor
     {
-        return $this->frameCursor ?? $this->cursor;
+        return $this->frame->cursor() ?? $this->cursor;
     }
 
     private function activeOutput(): OutputInterface
     {
-        return $this->frameBuffer ?? $this->output;
+        return $this->frame->output() ?? $this->output;
     }
 
     public function renderBoard(
@@ -428,8 +382,8 @@ final class TerminalGui
      */
     private function paint(int $column, int $row, string $text, ?string $style): void
     {
-        if ($this->diffBack !== null) {
-            $this->diffBack->paint($column, $row, $text, $style);
+        if ($this->diff->isActive()) {
+            $this->diff->paint($column, $row, $text, $style);
             return;
         }
 
@@ -474,14 +428,14 @@ final class TerminalGui
     {
         // Diff sessions own cursor placement at present()-time; draws into the
         // back-buffer never move the real cursor.
-        if ($this->diffBack !== null) {
+        if ($this->diff->isActive()) {
             return;
         }
 
         // Inside a frame, defer to a single move emitted by endFrame() so the
         // flush carries one trailing cursor move rather than one per draw.
-        if ($this->frameDepth > 0) {
-            $this->framePendingFinalize = true;
+        if ($this->frame->isActive()) {
+            $this->frame->requestFinalize();
             return;
         }
 

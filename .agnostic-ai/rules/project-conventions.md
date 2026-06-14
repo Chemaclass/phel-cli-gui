@@ -11,7 +11,7 @@ alwaysApply: true
 ## Layout
 
 - `src/phel/terminal-gui.phel` — the public Phel API.
-- `src/php/` — PHP classes (`PhelCliGui\` PSR-4): `TerminalGui` (Symfony wrapper + singleton), plus pure helpers `TerminalCanvas`, `BorderStyle`, `Text`, `AnsiStyle`.
+- `src/php/` — PHP classes (`PhelCliGui\` PSR-4): `TerminalGui` (Symfony wrapper + singleton facade) delegating to the `FrameSession` (frame batching) and `DiffSession` (cell diffing over `ScreenBuffer`) collaborators, plus pure helpers `TerminalCanvas`, `BorderStyle`, `Text`, `AnsiStyle`.
 - `tests/phel/` — pure-logic Phel tests; `tests/php/` — PHPUnit tests that exercise rendering via `BufferedOutput`.
 
 ## Toolchain
