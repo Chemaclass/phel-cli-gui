@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-14
+
 ### Added
 - Border presets & distinct corners: `draw-box`/`render-board` accept a preset keyword (`:ascii`, `:light`, `:rounded`, `:heavy`, `:double`) or a map with per-corner glyphs (`:top-left`/`:top-right`/`:bottom-left`/`:bottom-right`). `BorderStyle::withCorners()` plus the preset factories back it in PHP.
 - Diff rendering (`begin-diff`, `clear-buffer`, `present`, `end-diff`, `with-diff`): a double-buffered virtual screen that writes only the cells that changed since the previous frame. Changing one HUD digit on a 100×40 screen drops a ~4.3 KB full repaint to a handful of bytes.
@@ -148,7 +150,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release. Support PHP `^8.0` and Phel `^0.10`.
 
-[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.8.0...0.9.0
