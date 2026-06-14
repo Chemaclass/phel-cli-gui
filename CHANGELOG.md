@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-14
+
 ### Changed
 - Modernized `phel-config.php` to the non-deprecated `withLayout`/`withBuildConfig` builder API.
 - Adopted modern Phel 0.44 syntax: dot-separated namespaces (`phel.test`,
@@ -127,7 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release. Support PHP `^8.0` and Phel `^0.10`.
 
-[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.10.0...HEAD
+[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.11.0...HEAD
+[0.11.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.7.0...0.8.0
