@@ -53,6 +53,20 @@ final class ScreenBuffer
         $this->styles = array_fill(0, $size, null);
     }
 
+    /** Resets one row to blank, unstyled spaces. Out-of-range rows are ignored. */
+    public function clearRow(int $row): void
+    {
+        if ($row < 0 || $row >= $this->height) {
+            return;
+        }
+
+        $base = $row * $this->width;
+        for ($x = 0; $x < $this->width; $x++) {
+            $this->chars[$base + $x] = ' ';
+            $this->styles[$base + $x] = null;
+        }
+    }
+
     /**
      * Writes `text` starting at (column, row), one grapheme per cell to the
      * right. Cells outside the grid are clipped silently. An empty or null

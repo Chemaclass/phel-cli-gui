@@ -530,6 +530,55 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_diff_mode_clear_screen_blanks_buffer_not_terminal(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'abc');
+        $this->gui->present();
+        $this->output->fetch(); // drain first frame
+
+        // clear-screen must NOT punch "\e[2J" to the terminal (that would desync
+        // the diff baseline); it blanks the back-buffer, so present repaints the
+        // old cells as spaces.
+        $this->gui->clearScreen();
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertStringNotContainsString("\033[2J", $content);
+        self::assertStringContainsString('   ', $content); // 'abc' blanked
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_mode_clear_line_blanks_only_that_row(): void
+    {
+        $this->gui->beginDiff(10, 2);
+        $this->gui->render(0, 0, 'aaa');
+        $this->gui->render(0, 1, 'bbb');
+        $this->gui->present();
+        $this->output->fetch();
+
+        $this->gui->clearLine(1); // blank row 1 only
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertStringContainsString("\033[2;0H", $content); // repaint row 1
+        self::assertStringNotContainsString('aaa', $content);    // row 0 untouched
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_mode_cursor_moves_and_clear_output_are_noops(): void
+    {
+        $this->gui->beginDiff(20, 1);
+
+        $this->gui->moveCursor(5, 0);
+        $this->gui->cursorHome();
+        $this->gui->clearOutput();
+
+        // None of these touch the terminal during a diff session.
+        self::assertSame('', $this->output->fetch());
+        $this->gui->endDiff();
+    }
+
     public function test_present_without_diff_session_is_noop(): void
     {
         $this->gui->present();

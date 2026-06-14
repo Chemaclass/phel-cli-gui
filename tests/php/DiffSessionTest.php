@@ -73,6 +73,22 @@ final class DiffSessionTest extends TestCase
         );
     }
 
+    public function test_clear_line_blanks_only_that_row(): void
+    {
+        $diff = new DiffSession();
+        $diff->begin(5, 2);
+        $diff->paint(0, 0, 'aaaaa', null);
+        $diff->paint(0, 1, 'bbbbb', null);
+        $diff->collectRuns();
+
+        $diff->clearLine(1); // row 1 -> blank; row 0 stays
+
+        self::assertSame(
+            [['x' => 0, 'y' => 1, 'text' => '     ', 'style' => null]],
+            $diff->collectRuns(),
+        );
+    }
+
     public function test_end_deactivates(): void
     {
         $diff = new DiffSession();

@@ -42,6 +42,12 @@ final class DiffSession
         $this->back?->clear();
     }
 
+    /** Blanks one row of the back-buffer. No-op when no session is open. */
+    public function clearLine(int $row): void
+    {
+        $this->back?->clearRow($row);
+    }
+
     /** Paints into the back-buffer. No-op when no session is open. */
     public function paint(int $column, int $row, string $text, ?string $style): void
     {

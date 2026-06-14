@@ -168,6 +168,12 @@ screen drops a ~4.3 KB full repaint to a handful of bytes. Style boundaries and
 unchanged gaps split runs, so colour stays correct. Pair with `with-screen` and
 `clear-screen` once at startup so the first frame paints over a clean page.
 
+Inside a session the back-buffer *is* the screen, so the clear/cursor verbs act
+on it rather than the terminal: `clear-screen` blanks the back-buffer (same as
+`clear-buffer`), `clear-line` blanks that row, and `clear-output`, `move-cursor`
+and `cursor-home` are no-ops (`present` owns cursor placement). `hide-cursor` /
+`show-cursor` still affect the real terminal.
+
 ## Styling
 
 Register a named style once, then pass the name to any rendering call that

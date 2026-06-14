@@ -135,15 +135,29 @@ final class TerminalGui
         $this->activeOutput()->write("\033[?1049l", false, OutputInterface::OUTPUT_RAW);
     }
 
-    /** Moves the cursor to an absolute (column, row) position. */
+    /**
+     * Moves the cursor to an absolute (column, row) position. No-op during a
+     * diff session — present() owns cursor placement there.
+     */
     public function moveCursor(int $column, int $row): void
     {
+        if ($this->diff->isActive()) {
+            return;
+        }
+
         $this->activeCursor()->moveToPosition($column, $row);
     }
 
-    /** Moves the cursor to the top-left origin (0, 0). */
+    /**
+     * Moves the cursor to the top-left origin (0, 0). No-op during a diff
+     * session — present() owns cursor placement there.
+     */
     public function cursorHome(): void
     {
+        if ($this->diff->isActive()) {
+            return;
+        }
+
         $this->activeCursor()->moveToPosition(0, 0);
     }
 
@@ -263,8 +277,18 @@ final class TerminalGui
         $this->drawBox(0, 0, $width, $height, $style);
     }
 
+    /**
+     * Clears the screen. During a diff session the back-buffer is the screen,
+     * so this blanks it (like clearBuffer()) rather than punching an escape to
+     * the terminal — which would desync the diff baseline.
+     */
     public function clearScreen(): void
     {
+        if ($this->diff->isActive()) {
+            $this->diff->clear();
+            return;
+        }
+
         $this->activeCursor()->clearScreen();
     }
 
@@ -278,14 +302,33 @@ final class TerminalGui
         $this->activeCursor()->show();
     }
 
+    /**
+     * Clears one line. During a diff session this blanks that row of the
+     * back-buffer instead of writing to the terminal.
+     */
     public function clearLine(int $line): void
     {
+        if ($this->diff->isActive()) {
+            $this->diff->clearLine($line);
+            return;
+        }
+
         $this->activeCursor()->moveToPosition(0, $line);
         $this->activeCursor()->clearLine();
     }
 
+    /**
+     * Clears from the cursor to the end of the screen. This is cursor-relative
+     * and has no diff-buffer equivalent (a diff session has no live cursor), so
+     * it is a no-op during one — clear the area with clearScreen()/clearBuffer()
+     * or paint blanks instead.
+     */
     public function clearOutput(): void
     {
+        if ($this->diff->isActive()) {
+            return;
+        }
+
         $this->activeCursor()->clearOutput();
     }
 

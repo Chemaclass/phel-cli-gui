@@ -115,6 +115,33 @@ final class ScreenBufferTest extends TestCase
         self::assertSame([], $buffer->diff(new ScreenBuffer(3, 1)));
     }
 
+    public function test_clear_row_blanks_only_one_row(): void
+    {
+        $buffer = new ScreenBuffer(3, 2);
+        $buffer->paint(0, 0, 'abc', null);
+        $buffer->paint(0, 1, 'xyz', null);
+        $buffer->clearRow(0);
+
+        // Row 0 blanked, row 1 intact.
+        self::assertSame(
+            [['x' => 0, 'y' => 1, 'text' => 'xyz', 'style' => null]],
+            $buffer->diff(new ScreenBuffer(3, 2)),
+        );
+    }
+
+    public function test_clear_row_ignores_out_of_range(): void
+    {
+        $buffer = new ScreenBuffer(3, 1);
+        $buffer->paint(0, 0, 'abc', null);
+        $buffer->clearRow(9);
+        $buffer->clearRow(-1);
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => 'abc', 'style' => null]],
+            $buffer->diff(new ScreenBuffer(3, 1)),
+        );
+    }
+
     public function test_snapshot_is_independent(): void
     {
         $buffer = new ScreenBuffer(3, 1);

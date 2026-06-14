@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Input: `read-available` drains all pending bytes in one read for held-key responsiveness.
 
 ### Fixed
+- Diff sessions no longer desync on clear/cursor calls: inside `begin-diff`, `clear-screen` blanks the back-buffer (like `clear-buffer`), `clear-line` blanks that row, and `clear-output`/`move-cursor`/`cursor-home` are no-ops — instead of punching escapes straight to the terminal and leaving the diff baseline out of step with the real screen.
 - Unstyled text is now written raw, so literal `<...>` in rendered content is emitted verbatim instead of being parsed (and swallowed) as a Symfony markup tag.
 
 ### Performance
