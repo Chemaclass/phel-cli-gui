@@ -1,0 +1,9 @@
+parameters:
+    level: 9
+    paths:
+        - src/php
+        - tests/php
+    # A PHPDoc `resource` is not a runtime guarantee — a stream can be closed
+    # (is_resource() === false) without changing its static type, so the
+    # defensive is_resource()/posix_isatty() guards are not redundant.
+    treatPhpDocTypesAsCertain: false

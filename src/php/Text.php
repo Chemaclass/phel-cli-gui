@@ -12,11 +12,10 @@ final class Text
             return $fallback;
         }
 
-        $char = function_exists('mb_substr')
+        // $value is non-empty, so the first character is always non-empty too.
+        return function_exists('mb_substr')
             ? mb_substr($value, 0, 1)
             : substr($value, 0, 1);
-
-        return $char === '' ? $fallback : $char;
     }
 
     /**

@@ -44,6 +44,9 @@ jobs:
       - name: Build
         run: composer build
 
+      - name: Static analysis
+        run: composer phpstan
+
       - name: Test
         run: composer test
 

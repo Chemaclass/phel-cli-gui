@@ -27,6 +27,7 @@ final class TerminalGui
 
     private static ?self $instance = null;
 
+    /** @param resource $inputStream */
     public static function getInstance(
         $inputStream = STDIN,
         ?OutputInterface $output = null,
@@ -41,6 +42,7 @@ final class TerminalGui
         );
     }
 
+    /** @param resource $inputStream */
     public static function withStream(
         $inputStream = STDIN,
         ?OutputInterface $output = null,
@@ -500,6 +502,9 @@ final class TerminalGui
             $this->output->write("\033[?1049l", false, OutputInterface::OUTPUT_RAW);
         }
 
+        // Guards against an already-closed stream: at shutdown the input may be
+        // a closed resource (is_resource() === false), which restoreSttyMode's
+        // posix_isatty() would choke on.
         if (self::isStreamResource($this->inputStream)) {
             self::setBlockingIfPossible($this->inputStream, true);
             $this->restoreSttyMode();
@@ -545,6 +550,8 @@ final class TerminalGui
 
     /**
      * @param resource|mixed $stream
+     *
+     * @phpstan-assert-if-true resource $stream
      */
     private static function isStreamResource($stream): bool
     {

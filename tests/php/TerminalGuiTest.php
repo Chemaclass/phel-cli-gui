@@ -25,7 +25,9 @@ final class TerminalGuiTest extends TestCase
     protected function setUp(): void
     {
         $this->output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, true);
-        $this->inputStream = fopen('php://memory', 'rb');
+        $stream = fopen('php://memory', 'rb');
+        self::assertNotFalse($stream);
+        $this->inputStream = $stream;
 
         $this->gui = TerminalGui::withStream(
             inputStream: $this->inputStream,

@@ -37,6 +37,7 @@ final class AnsiStyle implements OutputFormatterStyleInterface
     {
     }
 
+    /** @param string[] $options */
     public function setOptions(array $options): void
     {
     }
