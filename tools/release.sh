@@ -20,6 +20,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=tools/release_lib.sh
+. "$SCRIPT_DIR/release_lib.sh"
+
 usage() { echo "Usage: tools/release.sh <version> [--dry-run]"; }
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -40,8 +44,7 @@ done
 case "$VERSION" in
   v*) die "use an unprefixed version (e.g. 0.12.0), not '$VERSION'" ;;
 esac
-echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$' \
-  || die "not a valid version: $VERSION"
+release_validate_version "$VERSION" || die "not a valid version: $VERSION"
 
 cd "$(git rev-parse --show-toplevel)"
 
@@ -66,14 +69,12 @@ grep -q '^## \[Unreleased\]$' "$CHANGELOG" || die "no '## [Unreleased]' section 
 # [Unreleased] link reference, so nothing is hardcoded.
 UNREL_LINE="$(grep -E '^\[Unreleased\]:' "$CHANGELOG" || true)"
 [ -n "$UNREL_LINE" ] || die "no '[Unreleased]:' link reference at the bottom of $CHANGELOG"
-COMPARE_URL="${UNREL_LINE#*: }"          # https://…/compare/0.11.0...HEAD
-BASE_URL="${COMPARE_URL%/compare/*}"     # https://…/phel-cli-gui
-PREV="${COMPARE_URL##*/compare/}"; PREV="${PREV%...HEAD}"
+BASE_URL="$(release_base_url "$UNREL_LINE")"     # https://…/phel-cli-gui
+PREV="$(release_prev_version "$UNREL_LINE")"     # 0.11.0
 [ -n "$BASE_URL" ] && [ -n "$PREV" ] || die "could not parse base URL / previous version from $CHANGELOG"
 
 # Refuse an empty release: there must be bullets under [Unreleased].
-UNREL_BODY="$(awk '/^## \[Unreleased\]$/{f=1;next} /^## \[/{f=0} f' "$CHANGELOG" | grep -E '^(- |### )' || true)"
-[ -n "$UNREL_BODY" ] || die "the [Unreleased] section is empty — nothing to release"
+release_unreleased_has_entries "$CHANGELOG" || die "the [Unreleased] section is empty — nothing to release"
 
 DATE="$(date +%F)"
 
@@ -94,28 +95,11 @@ fi
 # Insert a dated version header right after [Unreleased] (the existing bullets
 # become that version's notes), and update the link references.
 TMP="$(mktemp)"
-awk -v ver="$VERSION" -v date="$DATE" -v prev="$PREV" -v base="$BASE_URL" '
-  /^## \[Unreleased\]$/ {
-    print
-    print ""
-    print "## [" ver "] - " date
-    next
-  }
-  /^\[Unreleased\]:/ {
-    print "[Unreleased]: " base "/compare/" ver "...HEAD"
-    print "[" ver "]: " base "/compare/" prev "..." ver
-    next
-  }
-  { print }
-' "$CHANGELOG" > "$TMP"
+release_roll_changelog "$CHANGELOG" "$VERSION" "$DATE" "$PREV" "$BASE_URL" > "$TMP"
 mv "$TMP" "$CHANGELOG"
 
 # Extract just this version's notes for the GitHub release body.
-NOTES="$(awk -v ver="$VERSION" '
-  $0 ~ ("^## \\[" ver "\\]") {f=1; next}
-  f && /^## \[/ {f=0}
-  f {print}
-' "$CHANGELOG" | awk 'NF{p=1} p' )"
+NOTES="$(release_extract_notes "$CHANGELOG" "$VERSION")"
 
 if [ "$DRY_RUN" = 1 ]; then
   echo "----- CHANGELOG diff -----"

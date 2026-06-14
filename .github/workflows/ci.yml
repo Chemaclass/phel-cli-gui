@@ -46,3 +46,15 @@ jobs:
 
       - name: Test
         run: composer test
+
+  release-script:
+    name: Release script tests (bashunit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install & run bashunit
+        uses: TypedDevs/bashunit@main
+        with:
+          version: 0.39.1
+          args: tests/bash

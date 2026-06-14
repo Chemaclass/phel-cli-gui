@@ -113,6 +113,14 @@ tools/release.sh 0.12.0 --dry-run  # preview: gate + CHANGELOG diff + notes, no 
 Run it from a clean, up-to-date `main`. Requires `gh` authenticated. The tag is
 signed when a `user.signingkey` is configured.
 
+The script's pure helpers (version validation, CHANGELOG roll, notes
+extraction) live in `tools/release_lib.sh` and are covered by
+[bashunit](https://bashunit.typedevs.com) tests in `tests/bash/`, run in CI:
+
+```bash
+bashunit tests/bash
+```
+
 ## AI assistant config
 
 AI-assistant instructions are managed with [agnostic-ai](https://github.com/Chemaclass/agnostic-ai):
