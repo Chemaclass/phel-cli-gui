@@ -11,3 +11,14 @@ out/
 phel-config-local.php
 gacela-local.php
 local.phel
+
+# >>> agnostic-ai (managed) >>>
+# Generated paths. Edit specs, not this block. Run `agnostic-ai sync` to refresh.
+/.agnostic-ai/.sync-state
+/.agnostic-ai/AGNOSTIC_AI.md
+/.agnostic-ai/packs/
+/.claude/
+/AGENTS.md
+/CLAUDE.md
+/agnostic-ai.local.yaml
+# <<< agnostic-ai (managed) <<<
