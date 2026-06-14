@@ -24,6 +24,14 @@ final class TerminalGui
     private ?Cursor $frameCursor = null;
     private int $frameDepth = 0;
 
+    /**
+     * Set by a draw inside an open frame to request the trailing
+     * "park the cursor at max-bounds" move. Within a frame the move is
+     * coalesced — emitted once by endFrame() instead of once per draw —
+     * so the single flush carries one cursor move, not one per call.
+     */
+    private bool $framePendingFinalize = false;
+
     /** Whether the alternate screen buffer is currently active. */
     private bool $inAltScreen = false;
 
@@ -158,6 +166,7 @@ final class TerminalGui
             return;
         }
 
+        $this->framePendingFinalize = false;
         $this->frameBuffer = new BufferedOutput(
             $this->output->getVerbosity(),
             $this->output->isDecorated(),
@@ -174,6 +183,11 @@ final class TerminalGui
     {
         if ($this->frameDepth === 0 || --$this->frameDepth > 0) {
             return;
+        }
+
+        if ($this->framePendingFinalize) {
+            $this->framePendingFinalize = false;
+            $this->frameCursor?->moveToPosition($this->maxWidth, $this->maxHeight);
         }
 
         $buffer = $this->frameBuffer?->fetch() ?? '';
@@ -334,7 +348,14 @@ final class TerminalGui
 
     private function finalizeCursor(): void
     {
-        $this->activeCursor()->moveToPosition($this->maxWidth, $this->maxHeight);
+        // Inside a frame, defer to a single move emitted by endFrame() so the
+        // flush carries one trailing cursor move rather than one per draw.
+        if ($this->frameDepth > 0) {
+            $this->framePendingFinalize = true;
+            return;
+        }
+
+        $this->cursor->moveToPosition($this->maxWidth, $this->maxHeight);
     }
 
     private function cleanUp(): void

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 - `parse-key`: skip fallback-map allocation on known-key hits.
+- Frames coalesce the trailing cursor "park" move: a buffered frame emits one cursor move at `end-frame` instead of one per draw, trimming the redundant escape sequences from the single flush (≈39 fewer per 40-row repaint).
 
 ## [0.11.0] - 2026-06-14
 

@@ -302,6 +302,26 @@ final class TerminalGuiTest extends TestCase
         self::assertSame(1, $counter->writes);
     }
 
+    public function test_frame_coalesces_cursor_finalization_to_one_move(): void
+    {
+        // Two draws at distinct rows. In immediate mode each draw parks the
+        // cursor at the running max-bounds; inside a frame those intermediate
+        // parks are wasted bytes — only the final position matters.
+        $this->gui->beginFrame();
+        $this->gui->render(0, 0, 'ab'); // max-bounds (1, 0)
+        $this->gui->render(0, 5, 'cd'); // max-bounds (1, 5)
+        $this->gui->endFrame();
+
+        $content = $this->output->fetch();
+
+        // The intermediate park after the first draw — moveToPosition(1, 0) =>
+        // "\e[1;1H" — must not appear; it is coalesced away.
+        self::assertSame(0, substr_count($content, "\033[1;1H"));
+
+        // Exactly one trailing park to the final max-bounds (1, 5) => "\e[6;1H".
+        self::assertSame(1, substr_count($content, "\033[6;1H"));
+    }
+
     public function test_named_style_renders_inside_frame(): void
     {
         $this->gui->addOutputFormatter('danger', new OutputFormatterStyle('red', null, ['bold']));
