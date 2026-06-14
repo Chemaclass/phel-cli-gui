@@ -24,6 +24,9 @@ final class TerminalGui
     private ?Cursor $frameCursor = null;
     private int $frameDepth = 0;
 
+    /** Whether the alternate screen buffer is currently active. */
+    private bool $inAltScreen = false;
+
     private static ?self $instance = null;
 
     public static function getInstance(
@@ -94,6 +97,54 @@ final class TerminalGui
         $this->output->getFormatter()->setStyle($name, $style);
 
         return $this;
+    }
+
+    /**
+     * Registers a named style from a raw ANSI SGR parameter string, e.g.
+     * "38;5;196" (xterm-256) or "38;2;255;0;0" (truecolor). Usable in any
+     * render call exactly like a style added via addOutputFormatter().
+     */
+    public function addAnsiStyle(string $name, string $sgr): self
+    {
+        return $this->addOutputFormatter($name, new AnsiStyle($sgr));
+    }
+
+    /**
+     * Switches to the terminal's alternate screen buffer, so a full-screen UI
+     * draws on a fresh page and the user's scrollback is restored untouched on
+     * leaveAltScreen() (or cleanUp()). Idempotent.
+     */
+    public function enterAltScreen(): void
+    {
+        if ($this->inAltScreen) {
+            return;
+        }
+
+        $this->inAltScreen = true;
+        $this->activeOutput()->write("\033[?1049h", false, OutputInterface::OUTPUT_RAW);
+    }
+
+    /** Leaves the alternate screen buffer, restoring prior terminal content. */
+    public function leaveAltScreen(): void
+    {
+        if (!$this->inAltScreen) {
+            return;
+        }
+
+        $this->inAltScreen = false;
+        $this->activeOutput()->write("\033[?1049l", false, OutputInterface::OUTPUT_RAW);
+    }
+
+    /** Moves the cursor to an absolute (column, row) position. */
+    public function moveCursor(int $column, int $row): void
+    {
+        $this->activeCursor()->moveToPosition($column, $row);
+    }
+
+    /** Moves the cursor to the top-left origin (0, 0). */
+    public function cursorHome(): void
+    {
+        $this->activeCursor()->moveToPosition(0, 0);
     }
 
     /**
@@ -295,6 +346,11 @@ final class TerminalGui
         $this->cleanedUp = true;
         $this->cursor->show();
         $this->output->write("\033[0m");
+
+        if ($this->inAltScreen) {
+            $this->inAltScreen = false;
+            $this->output->write("\033[?1049l", false, OutputInterface::OUTPUT_RAW);
+        }
 
         if (self::isStreamResource($this->inputStream)) {
             self::setBlockingIfPossible($this->inputStream, true);
