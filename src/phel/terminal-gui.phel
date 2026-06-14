@@ -10,9 +10,8 @@
   (TerminalGui/getInstance php/STDIN))
 
 (defn- make-border-style
-  [border-style]
-  (let [{:keys [horizontal vertical corner]} (or border-style {})]
-    (BorderStyle/withChars horizontal vertical corner)))
+  [{:keys [horizontal vertical corner]}]
+  (BorderStyle/withChars horizontal vertical corner))
 
 (def- key-map
   {"1b5b41" :up
@@ -52,7 +51,7 @@
   {:example "(parse-key {:raw \"\\r\" :hex \"0d\"}) ; => :enter"
    :see-also ["read-key" "read-input"]}
   [{:keys [raw hex]}]
-  (when-not (= "" hex)
+  (when-not (empty? hex)
     (get key-map hex {:char raw})))
 
 (defn read-key
