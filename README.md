@@ -99,6 +99,20 @@ tests/
   php/                      PHPUnit tests exercising the rendering layer
 ```
 
+## Releasing
+
+Cutting a release is a single command — it runs the quality gate, rolls the
+`CHANGELOG.md` `[Unreleased]` section into a dated version (and updates the
+compare-link references), commits, tags, pushes, and creates the GitHub release:
+
+```bash
+tools/release.sh 0.12.0            # full release
+tools/release.sh 0.12.0 --dry-run  # preview: gate + CHANGELOG diff + notes, no writes
+```
+
+Run it from a clean, up-to-date `main`. Requires `gh` authenticated. The tag is
+signed when a `user.signingkey` is configured.
+
 ## AI assistant config
 
 AI-assistant instructions are managed with [agnostic-ai](https://github.com/Chemaclass/agnostic-ai):
