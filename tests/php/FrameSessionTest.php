@@ -39,7 +39,9 @@ final class FrameSessionTest extends TestCase
     {
         $frame = new FrameSession();
         $frame->begin($this->base());
-        $frame->output()->write('hello', false, OutputInterface::OUTPUT_RAW);
+        $output = $frame->output();
+        self::assertNotNull($output);
+        $output->write('hello', false, OutputInterface::OUTPUT_RAW);
 
         self::assertSame('hello', $frame->end(0, 0));
         self::assertFalse($frame->isActive());
@@ -58,7 +60,9 @@ final class FrameSessionTest extends TestCase
         $frame = new FrameSession();
         $frame->begin($this->base());
         $frame->begin($this->base()); // inner — ignored, depth bump only
-        $frame->output()->write('x', false, OutputInterface::OUTPUT_RAW);
+        $output = $frame->output();
+        self::assertNotNull($output);
+        $output->write('x', false, OutputInterface::OUTPUT_RAW);
 
         self::assertNull($frame->end(0, 0)); // inner close: no flush
         self::assertTrue($frame->isActive());

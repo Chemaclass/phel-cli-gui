@@ -18,10 +18,10 @@ use InvalidArgumentException;
  */
 final class ScreenBuffer
 {
-    /** @var list<string> one glyph per cell, blank = ' ' */
+    /** @var array<int, string> one glyph per cell, blank = ' ', indexed row*width+column */
     private array $chars;
 
-    /** @var list<?string> style name per cell, null = unstyled */
+    /** @var array<int, ?string> style name per cell, null = unstyled, indexed row*width+column */
     private array $styles;
 
     public function __construct(
