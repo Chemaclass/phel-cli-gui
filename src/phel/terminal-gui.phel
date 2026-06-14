@@ -1,8 +1,8 @@
-(ns phel-cli-gui\terminal-gui
-  (:use \PhelCliGui\TerminalGui)
-  (:use \PhelCliGui\BorderStyle)
-  (:use \Symfony\Component\Console\Formatter\OutputFormatterStyle)
-  (:use \Symfony\Component\Console\Terminal))
+(ns phel-cli-gui.terminal-gui
+  (:use PhelCliGui.TerminalGui)
+  (:use PhelCliGui.BorderStyle)
+  (:use Symfony.Component.Console.Formatter.OutputFormatterStyle)
+  (:use Symfony.Component.Console.Terminal))
 
 (defn- get-gui
   "Gets the singleton GUI instance."
@@ -33,10 +33,10 @@
     :or {options []}}]
   (.addOutputFormatter (get-gui)
                        style-name
-                       (new OutputFormatterStyle
-                            foreground
-                            background
-                            (to-php-array options))))
+                       (php/new OutputFormatterStyle
+                                foreground
+                                background
+                                (to-php-array options))))
 
 (defn read-input
   "Reads the input stream and returns it in different formats."
@@ -66,7 +66,7 @@
   "Returns the current terminal dimensions as {:width w :height h}."
   {:example "(terminal-size) ; => {:width 120 :height 40}"}
   []
-  (let [term (new Terminal)]
+  (let [term (php/new Terminal)]
     {:width  (.getWidth term)
      :height (.getHeight term)}))
 

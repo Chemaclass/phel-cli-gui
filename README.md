@@ -13,9 +13,9 @@ exposed behind a small, data-first Phel API.
 
 ## Requirements
 
-- PHP 8.3+
+- PHP 8.4+
 - `ext-pcntl`, `ext-posix`, `ext-readline`
-- Phel `^0.34`
+- Phel `^0.44`
 
 ## Install
 
@@ -26,8 +26,8 @@ composer require chemaclass/phel-cli-gui
 Require the namespace in your Phel file:
 
 ```phel
-(ns my-app\main
-  (:require phel-cli-gui\terminal-gui :refer [render read-key draw-box clear-screen]))
+(ns my-app.main
+  (:require phel-cli-gui.terminal-gui :refer [render read-key draw-box clear-screen]))
 ```
 
 ## Quick start
@@ -35,8 +35,8 @@ Require the namespace in your Phel file:
 Draw a bordered box, render text inside it, wait for a key, quit.
 
 ```phel
-(ns my-app\hello
-  (:require phel-cli-gui\terminal-gui
+(ns my-app.hello
+  (:require phel-cli-gui.terminal-gui
             :refer [clear-screen draw-box render read-key cleanup-gui]))
 
 (defn main []

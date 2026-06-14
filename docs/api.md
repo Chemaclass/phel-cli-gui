@@ -1,6 +1,6 @@
 # API reference
 
-All public functions live in `phel-cli-gui\terminal-gui`.
+All public functions live in `phel-cli-gui.terminal-gui`.
 
 ## Input
 
