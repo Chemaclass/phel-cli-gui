@@ -52,7 +52,7 @@
    :see-also ["read-key" "read-input"]}
   [{:keys [raw hex]}]
   (when-not (empty? hex)
-    (get key-map hex {:char raw})))
+    (or (get key-map hex) {:char raw})))
 
 (defn read-key
   "Reads one key press from stdin and returns a key keyword or {:char c}.
