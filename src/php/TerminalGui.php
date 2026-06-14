@@ -35,6 +35,14 @@ final class TerminalGui
     /** Whether the alternate screen buffer is currently active. */
     private bool $inAltScreen = false;
 
+    /**
+     * Double-buffered diff rendering. While a diff session is open, draw verbs
+     * paint into $diffBack instead of emitting cursor moves; present() writes
+     * only the cells that changed since $diffFront (the last presented frame).
+     */
+    private ?ScreenBuffer $diffBack = null;
+    private ?ScreenBuffer $diffFront = null;
+
     private static ?self $instance = null;
 
     public static function getInstance(
@@ -199,6 +207,68 @@ final class TerminalGui
         }
     }
 
+    /**
+     * Opens a double-buffered diff session sized to (width, height). While open,
+     * draw verbs paint into a back-buffer instead of the terminal; present()
+     * then writes only the cells that changed since the previous frame. Pair
+     * with clearBuffer() at the top of each frame to repaint from blank.
+     */
+    public function beginDiff(int $width, int $height): void
+    {
+        $this->diffBack = new ScreenBuffer($width, $height);
+        $this->diffFront = null;
+    }
+
+    /** Closes the diff session and releases both buffers. */
+    public function endDiff(): void
+    {
+        $this->diffBack = null;
+        $this->diffFront = null;
+    }
+
+    /** Resets the back-buffer to blank. No-op when no diff session is open. */
+    public function clearBuffer(): void
+    {
+        $this->diffBack?->clear();
+    }
+
+    /**
+     * Diffs the back-buffer against the previously presented frame and writes
+     * only the changed runs in a single raw write, then snapshots the
+     * back-buffer as the new previous frame. No-op when no diff session is open.
+     */
+    public function present(): void
+    {
+        $back = $this->diffBack;
+        if ($back === null) {
+            return;
+        }
+
+        $previous = $this->diffFront ?? new ScreenBuffer($back->width(), $back->height());
+        $runs = $back->diff($previous);
+
+        if ($runs !== []) {
+            $buffer = new BufferedOutput(
+                $this->output->getVerbosity(),
+                $this->output->isDecorated(),
+                $this->output->getFormatter(),
+            );
+            $cursor = new Cursor($buffer);
+
+            foreach ($runs as $run) {
+                $cursor->moveToPosition($run['x'], $run['y']);
+                $buffer->write($this->decorate($run['text'], $run['style']));
+            }
+
+            $out = $buffer->fetch();
+            if ($out !== '') {
+                $this->output->write($out, false, OutputInterface::OUTPUT_RAW);
+            }
+        }
+
+        $this->diffFront = $back->snapshot();
+    }
+
     private function activeCursor(): Cursor
     {
         return $this->frameCursor ?? $this->cursor;
@@ -245,8 +315,7 @@ final class TerminalGui
 
     public function render(int $column, int $row, string $text, ?string $style = ''): void
     {
-        $this->activeCursor()->moveToPosition($column, $row);
-        $this->write($text, $style);
+        $this->paint($column, $row, $text, $style);
         $this->updateBoundsForArea($column, $row, Text::displayWidth($text), 1);
         $this->finalizeCursor();
     }
@@ -255,8 +324,7 @@ final class TerminalGui
     {
         $lines = preg_split('/\R/', $text) ?: [''];
         foreach ($lines as $offset => $line) {
-            $this->activeCursor()->moveToPosition($column, $row + $offset);
-            $this->write($line, $style);
+            $this->paint($column, $row + $offset, $line, $style);
             $this->updateBoundsForArea($column, $row + $offset, Text::displayWidth($line), 1);
         }
         $this->finalizeCursor();
@@ -265,8 +333,7 @@ final class TerminalGui
     public function drawHorizontalLine(int $column, int $row, int $length, string $char, ?string $style = ''): void
     {
         $line = TerminalCanvas::horizontalLine($length, $char);
-        $this->activeCursor()->moveToPosition($column, $row);
-        $this->write($line, $style);
+        $this->paint($column, $row, $line, $style);
         $this->updateBoundsForArea($column, $row, $length, 1);
         $this->finalizeCursor();
     }
@@ -279,8 +346,7 @@ final class TerminalGui
 
         $segment = Text::firstChar($char !== '' ? $char : '|', '|');
         for ($offset = 0; $offset < $length; $offset++) {
-            $this->activeCursor()->moveToPosition($column, $row + $offset);
-            $this->write($segment, $style);
+            $this->paint($column, $row + $offset, $segment, $style);
         }
         $this->updateBoundsForArea($column, $row, 1, $length);
         $this->finalizeCursor();
@@ -299,8 +365,7 @@ final class TerminalGui
 
         $line = TerminalCanvas::horizontalLine($width, $fillChar);
         for ($offset = 0; $offset < $height; $offset++) {
-            $this->activeCursor()->moveToPosition($column, $row + $offset);
-            $this->write($line);
+            $this->paint($column, $row + $offset, $line, null);
         }
         $this->updateBoundsForArea($column, $row, $width, $height);
         $this->finalizeCursor();
@@ -317,8 +382,7 @@ final class TerminalGui
         $lines = TerminalCanvas::boxLines($width, $height, $style ?? BorderStyle::withChars(), $fillChar);
 
         foreach ($lines as $offset => $line) {
-            $this->activeCursor()->moveToPosition($column, $row + $offset);
-            $this->write($line);
+            $this->paint($column, $row + $offset, $line, null);
         }
 
         $this->updateBoundsForArea($column, $row, $width, $height);
@@ -335,9 +399,30 @@ final class TerminalGui
         return $this->maxHeight;
     }
 
+    /**
+     * Places text at (column, row): into the diff back-buffer when a diff
+     * session is open, otherwise straight to the active cursor/output. The one
+     * funnel every draw verb routes glyph placement through.
+     */
+    private function paint(int $column, int $row, string $text, ?string $style): void
+    {
+        if ($this->diffBack !== null) {
+            $this->diffBack->paint($column, $row, $text, $style);
+            return;
+        }
+
+        $this->activeCursor()->moveToPosition($column, $row);
+        $this->write($text, $style);
+    }
+
     private function write(string $text, ?string $style = ''): void
     {
-        $this->activeOutput()->write(empty($style) ? $text : "<$style>$text</$style>");
+        $this->activeOutput()->write($this->decorate($text, $style));
+    }
+
+    private function decorate(string $text, ?string $style): string
+    {
+        return ($style === null || $style === '') ? $text : "<$style>$text</$style>";
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void
@@ -348,6 +433,12 @@ final class TerminalGui
 
     private function finalizeCursor(): void
     {
+        // Diff sessions own cursor placement at present()-time; draws into the
+        // back-buffer never move the real cursor.
+        if ($this->diffBack !== null) {
+            return;
+        }
+
         // Inside a frame, defer to a single move emitted by endFrame() so the
         // flush carries one trailing cursor move rather than one per draw.
         if ($this->frameDepth > 0) {

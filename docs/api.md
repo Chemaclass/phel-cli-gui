@@ -113,6 +113,37 @@ draws in a frame so they accumulate and flush in a **single** write.
 
 Output is byte-identical to immediate mode; only the number of writes changes.
 
+## Diff rendering
+
+A frame batches a repaint into one write, but still rewrites **every** cell.
+A diff session keeps a virtual screen and writes only the cells that changed
+since the previous frame — the minimal repaint a flicker-free TUI wants. Draw
+with the normal verbs; they paint into a back-buffer while a session is open.
+
+| Function | Effect |
+|---|---|
+| `(begin-diff {:width w :height h})` | Open a diff session sized to the screen. Draw verbs now paint into the back-buffer. |
+| `(clear-buffer)` | Reset the back-buffer to blank. Run at the top of each frame. |
+| `(present)` | Diff against the last frame and write only the changed runs, in one write. |
+| `(end-diff)` | Close the session and release both buffers. |
+| `(with-diff {:width w :height h} & body)` | Macro: run `body` inside a session, closing it on completion (even on throw). |
+
+```phel
+(with-screen
+  (with-diff (terminal-size)
+    (loop [score 0]
+      (clear-buffer)
+      (draw-box {:x 0 :y 0 :width 20 :height 8})
+      (render 2 2 (str "Score: " score))
+      (present)            ; only the digits that changed hit the terminal
+      (recur (inc score)))))
+```
+
+Each `present` writes only the dirty runs: changing one HUD digit on a 100×40
+screen drops a ~4.3 KB full repaint to a handful of bytes. Style boundaries and
+unchanged gaps split runs, so colour stays correct. Pair with `with-screen` and
+`clear-screen` once at startup so the first frame paints over a clean page.
+
 ## Styling
 
 Register a named style once, then pass the name to any rendering call that

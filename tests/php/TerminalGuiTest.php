@@ -382,6 +382,89 @@ final class TerminalGuiTest extends TestCase
         self::assertStringContainsString("\033[?1049l", $output->fetch());
     }
 
+    public function test_diff_present_writes_painted_cells_at_position(): void
+    {
+        $this->gui->beginDiff(20, 5);
+        $this->gui->render(3, 2, 'hello');
+        self::assertSame('', $this->output->fetch()); // nothing until present
+
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        // moveToPosition(3, 2) => "\e[3;3H" then the run text.
+        self::assertStringContainsString("\033[3;3Hhello", $content);
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_present_is_noop_when_nothing_changed(): void
+    {
+        $this->gui->beginDiff(20, 5);
+        $this->gui->render(0, 0, 'static');
+        $this->gui->present();
+        $this->output->fetch(); // drain first frame
+
+        // Same content again: the diff is empty, so present writes nothing.
+        $this->gui->render(0, 0, 'static');
+        $this->gui->present();
+
+        self::assertSame('', $this->output->fetch());
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_present_writes_only_changed_run(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'hello');
+        $this->gui->present();
+        $this->output->fetch(); // drain first frame
+
+        // Flip one cell: "hello" -> "heXlo". Only that cell repaints.
+        $this->gui->render(2, 0, 'X');
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertStringContainsString("\033[1;2HX", $content);
+        self::assertStringNotContainsString('hello', $content);
+        $this->gui->endDiff();
+    }
+
+    public function test_clear_buffer_repaints_from_blank(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'abc', 'lava');
+        $this->gui->addAnsiStyle('lava', '38;5;196');
+        $this->gui->present();
+        $this->output->fetch();
+
+        // Clear then leave the cell blank: the old glyphs must be overwritten
+        // with spaces in the diff.
+        $this->gui->clearBuffer();
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertStringContainsString("\033[1;0H", $content); // repaint at origin
+        self::assertStringContainsString('   ', $content);       // blanked cells
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_styled_run_wraps_in_named_style(): void
+    {
+        $this->gui->addAnsiStyle('lava', '38;5;196');
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'x', 'lava');
+        $this->gui->present();
+
+        self::assertStringContainsString("\033[38;5;196mx\033[0m", $this->output->fetch());
+        $this->gui->endDiff();
+    }
+
+    public function test_present_without_diff_session_is_noop(): void
+    {
+        $this->gui->present();
+
+        self::assertSame('', $this->output->fetch());
+    }
+
     public function test_move_cursor_emits_absolute_position(): void
     {
         $this->gui->moveCursor(3, 2);

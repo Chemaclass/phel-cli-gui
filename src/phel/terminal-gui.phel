@@ -203,6 +203,53 @@
        (finally
          (end-frame)))))
 
+(defn begin-diff
+  "Opens a double-buffered diff session sized to {:width w :height h}. While
+  open, every draw verb (render, draw-box, fill-region, ...) paints into a
+  back-buffer instead of the terminal; present then writes only the cells that
+  changed since the last frame — the minimal repaint a flicker-free TUI wants.
+  Call clear-buffer at the top of each frame to repaint from blank."
+  {:example "(begin-diff {:width 80 :height 24})"
+   :see-also ["present" "clear-buffer" "end-diff" "with-diff"]}
+  [{:keys [width height]}]
+  (.beginDiff (get-gui) width height))
+
+(defn end-diff
+  "Closes the diff session and releases both buffers."
+  {:see-also ["begin-diff" "with-diff"]}
+  []
+  (.endDiff (get-gui)))
+
+(defn clear-buffer
+  "Resets the diff back-buffer to blank. No-op outside a diff session.
+  Run it at the start of each frame, then redraw, then present."
+  {:see-also ["begin-diff" "present"]}
+  []
+  (.clearBuffer (get-gui)))
+
+(defn present
+  "Diffs the back-buffer against the previously presented frame and writes only
+  the changed runs in a single write, then keeps the frame as the new baseline.
+  No-op outside a diff session."
+  {:example "(do (clear-buffer) (render 0 0 \"hi\") (present))"
+   :see-also ["begin-diff" "clear-buffer" "with-diff"]}
+  []
+  (.present (get-gui)))
+
+(defmacro with-diff
+  "Runs body inside a diff session of the given {:width w :height h}, closing it
+  on completion (even if body throws). Inside, draw with the normal verbs and
+  call present to flush each frame's minimal repaint."
+  {:example "(with-diff {:width 80 :height 24} (loop [] (clear-buffer) (render 0 0 \"hi\") (present) (recur)))"
+   :see-also ["begin-diff" "end-diff" "present"]}
+  [dims & body]
+  `(do
+     (begin-diff ~dims)
+     (try
+       (do ~@body)
+       (finally
+         (end-diff)))))
+
 (defn enter-alt-screen
   "Switches to the terminal's alternate screen buffer: a full-screen UI draws
   on a fresh page and the user's scrollback is restored untouched on

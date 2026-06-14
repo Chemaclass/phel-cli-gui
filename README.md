@@ -10,6 +10,7 @@ exposed behind a small, data-first Phel API.
 - Works with any TTY (ANSI-capable).
 - Zero globals — one managed `TerminalGui` singleton per process.
 - Pure helpers (`parse-key`) are easy to test without a real terminal.
+- Diff rendering writes only the cells that changed each frame — see [docs/api.md](docs/api.md#diff-rendering).
 
 ## Requirements
 

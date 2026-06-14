@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Diff rendering (`begin-diff`, `clear-buffer`, `present`, `end-diff`, `with-diff`): a double-buffered virtual screen that writes only the cells that changed since the previous frame. Changing one HUD digit on a 100×40 screen drops a ~4.3 KB full repaint to a handful of bytes.
 - Frame batching (`begin-frame`, `end-frame`, `with-frame`): buffer a frame's draws into a single write.
 - 256-color & truecolor styles: `add-color` (`:fg-256`/`:bg-256`/`:fg-rgb`/`:bg-rgb`/`:options`) and the pure `color->sgr` helper.
 - Alternate screen: `enter-alt-screen`, `leave-alt-screen`, `with-screen` macro (also left on cleanup).
