@@ -6,6 +6,7 @@ namespace PhelCliGui;
 
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -14,6 +15,15 @@ final class TerminalGui
     private int $maxWidth = 0;
     private int $maxHeight = 0;
     private bool $cleanedUp = false;
+
+    /**
+     * When a frame is open, draws are accumulated here and flushed to the real
+     * output in a single write by endFrame(). Null in immediate mode.
+     */
+    private ?BufferedOutput $frameBuffer = null;
+    private ?Cursor $frameCursor = null;
+    private int $frameDepth = 0;
+
     private static ?self $instance = null;
 
     public static function getInstance(
@@ -86,6 +96,54 @@ final class TerminalGui
         return $this;
     }
 
+    /**
+     * Opens a buffered frame: subsequent draw/cursor operations are accumulated
+     * and emitted in a single write by endFrame(), instead of one write per call.
+     * Nestable — only the outermost end flushes.
+     */
+    public function beginFrame(): void
+    {
+        if ($this->frameDepth++ > 0) {
+            return;
+        }
+
+        $this->frameBuffer = new BufferedOutput(
+            $this->output->getVerbosity(),
+            $this->output->isDecorated(),
+            $this->output->getFormatter(),
+        );
+        $this->frameCursor = new Cursor($this->frameBuffer);
+    }
+
+    /**
+     * Flushes the current buffered frame to the terminal in a single raw write.
+     * No-op when no frame is open; only the outermost call flushes.
+     */
+    public function endFrame(): void
+    {
+        if ($this->frameDepth === 0 || --$this->frameDepth > 0) {
+            return;
+        }
+
+        $buffer = $this->frameBuffer?->fetch() ?? '';
+        $this->frameBuffer = null;
+        $this->frameCursor = null;
+
+        if ($buffer !== '') {
+            $this->output->write($buffer, false, OutputInterface::OUTPUT_RAW);
+        }
+    }
+
+    private function activeCursor(): Cursor
+    {
+        return $this->frameCursor ?? $this->cursor;
+    }
+
+    private function activeOutput(): OutputInterface
+    {
+        return $this->frameBuffer ?? $this->output;
+    }
+
     public function renderBoard(
         int $width,
         int $height,
@@ -96,33 +154,33 @@ final class TerminalGui
 
     public function clearScreen(): void
     {
-        $this->cursor->clearScreen();
+        $this->activeCursor()->clearScreen();
     }
 
     public function hideCursor(): void
     {
-        $this->cursor->hide();
+        $this->activeCursor()->hide();
     }
 
     public function showCursor(): void
     {
-        $this->cursor->show();
+        $this->activeCursor()->show();
     }
 
     public function clearLine(int $line): void
     {
-        $this->cursor->moveToPosition(0, $line);
-        $this->cursor->clearLine();
+        $this->activeCursor()->moveToPosition(0, $line);
+        $this->activeCursor()->clearLine();
     }
 
     public function clearOutput(): void
     {
-        $this->cursor->clearOutput();
+        $this->activeCursor()->clearOutput();
     }
 
     public function render(int $column, int $row, string $text, ?string $style = ''): void
     {
-        $this->cursor->moveToPosition($column, $row);
+        $this->activeCursor()->moveToPosition($column, $row);
         $this->write($text, $style);
         $this->updateBoundsForArea($column, $row, Text::displayWidth($text), 1);
         $this->finalizeCursor();
@@ -132,7 +190,7 @@ final class TerminalGui
     {
         $lines = preg_split('/\R/', $text) ?: [''];
         foreach ($lines as $offset => $line) {
-            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->activeCursor()->moveToPosition($column, $row + $offset);
             $this->write($line, $style);
             $this->updateBoundsForArea($column, $row + $offset, Text::displayWidth($line), 1);
         }
@@ -142,7 +200,7 @@ final class TerminalGui
     public function drawHorizontalLine(int $column, int $row, int $length, string $char, ?string $style = ''): void
     {
         $line = TerminalCanvas::horizontalLine($length, $char);
-        $this->cursor->moveToPosition($column, $row);
+        $this->activeCursor()->moveToPosition($column, $row);
         $this->write($line, $style);
         $this->updateBoundsForArea($column, $row, $length, 1);
         $this->finalizeCursor();
@@ -156,7 +214,7 @@ final class TerminalGui
 
         $segment = Text::firstChar($char !== '' ? $char : '|', '|');
         for ($offset = 0; $offset < $length; $offset++) {
-            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->activeCursor()->moveToPosition($column, $row + $offset);
             $this->write($segment, $style);
         }
         $this->updateBoundsForArea($column, $row, 1, $length);
@@ -176,7 +234,7 @@ final class TerminalGui
 
         $line = TerminalCanvas::horizontalLine($width, $fillChar);
         for ($offset = 0; $offset < $height; $offset++) {
-            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->activeCursor()->moveToPosition($column, $row + $offset);
             $this->write($line);
         }
         $this->updateBoundsForArea($column, $row, $width, $height);
@@ -194,7 +252,7 @@ final class TerminalGui
         $lines = TerminalCanvas::boxLines($width, $height, $style ?? BorderStyle::withChars(), $fillChar);
 
         foreach ($lines as $offset => $line) {
-            $this->cursor->moveToPosition($column, $row + $offset);
+            $this->activeCursor()->moveToPosition($column, $row + $offset);
             $this->write($line);
         }
 
@@ -214,7 +272,7 @@ final class TerminalGui
 
     private function write(string $text, ?string $style = ''): void
     {
-        $this->output->write(empty($style) ? $text : "<$style>$text</$style>");
+        $this->activeOutput()->write(empty($style) ? $text : "<$style>$text</$style>");
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void
@@ -225,7 +283,7 @@ final class TerminalGui
 
     private function finalizeCursor(): void
     {
-        $this->cursor->moveToPosition($this->maxWidth, $this->maxHeight);
+        $this->activeCursor()->moveToPosition($this->maxWidth, $this->maxHeight);
     }
 
     private function cleanUp(): void

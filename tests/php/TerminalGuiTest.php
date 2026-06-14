@@ -224,4 +224,92 @@ final class TerminalGuiTest extends TestCase
 
         self::assertSame($a, $b);
     }
+
+    public function test_begin_frame_defers_writes_until_end_frame(): void
+    {
+        $this->gui->beginFrame();
+        $this->gui->render(0, 0, 'buffered');
+
+        // Nothing reaches the real output while the frame is open.
+        self::assertSame('', $this->output->fetch());
+
+        $this->gui->endFrame();
+        self::assertStringContainsString('buffered', $this->output->fetch());
+    }
+
+    public function test_frame_output_matches_immediate_mode(): void
+    {
+        $this->gui->render(1, 1, 'abc');
+        $immediate = $this->output->fetch();
+
+        $this->gui->beginFrame();
+        $this->gui->render(1, 1, 'abc');
+        $this->gui->endFrame();
+        $buffered = $this->output->fetch();
+
+        self::assertSame($immediate, $buffered);
+    }
+
+    public function test_nested_frames_flush_only_on_outermost_end(): void
+    {
+        $this->gui->beginFrame();
+        $this->gui->beginFrame();
+        $this->gui->render(0, 0, 'x');
+
+        $this->gui->endFrame(); // inner — no flush yet
+        self::assertSame('', $this->output->fetch());
+
+        $this->gui->endFrame(); // outer — flush
+        self::assertStringContainsString('x', $this->output->fetch());
+    }
+
+    public function test_end_frame_without_begin_is_noop(): void
+    {
+        $this->gui->endFrame();
+
+        self::assertSame('', $this->output->fetch());
+    }
+
+    public function test_frame_collapses_many_draws_into_a_single_write(): void
+    {
+        TerminalGui::resetInstance();
+
+        $counter = new class(OutputInterface::VERBOSITY_NORMAL, true) extends BufferedOutput {
+            public int $writes = 0;
+
+            protected function doWrite(string $message, bool $newline): void
+            {
+                ++$this->writes;
+                parent::doWrite($message, $newline);
+            }
+        };
+
+        $gui = TerminalGui::withStream(
+            inputStream: $this->inputStream,
+            output: $counter,
+            cursor: new Cursor($counter),
+            registerShutdownHandlers: false,
+        );
+        $counter->writes = 0; // ignore init (cursor hide + move-to-origin)
+
+        $gui->beginFrame();
+        for ($row = 0; $row < 10; ++$row) {
+            $gui->render(0, $row, 'row');
+        }
+        $gui->endFrame();
+
+        // 10 immediate renders would be 30+ writes; buffered collapses to one.
+        self::assertSame(1, $counter->writes);
+    }
+
+    public function test_named_style_renders_inside_frame(): void
+    {
+        $this->gui->addOutputFormatter('danger', new OutputFormatterStyle('red', null, ['bold']));
+
+        $this->gui->beginFrame();
+        $this->gui->render(0, 0, 'boom', 'danger');
+        $this->gui->endFrame();
+
+        self::assertStringContainsString("\033[31;1mboom\033[39;22m", $this->output->fetch());
+    }
 }

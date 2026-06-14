@@ -109,6 +109,34 @@
   [line]
   (.clearLine (get-gui) line))
 
+(defn begin-frame
+  "Opens a buffered frame: subsequent draws are accumulated and flushed to the
+  terminal in a single write by end-frame, instead of one write per draw call.
+  Nestable — only the outermost end-frame flushes."
+  {:see-also ["end-frame" "with-frame"]}
+  []
+  (.beginFrame (get-gui)))
+
+(defn end-frame
+  "Flushes the current buffered frame to the terminal in a single write.
+  No-op when no frame is open; only the outermost call flushes."
+  {:see-also ["begin-frame" "with-frame"]}
+  []
+  (.endFrame (get-gui)))
+
+(defmacro with-frame
+  "Evaluates body inside a buffered frame, flushing every draw in a single
+  write once body completes (even if it throws)."
+  {:example "(with-frame (draw-box {:x 0 :y 0 :width 10 :height 5}) (render 2 2 \"hi\"))"
+   :see-also ["begin-frame" "end-frame"]}
+  [& body]
+  `(do
+     (begin-frame)
+     (try
+       (do ~@body)
+       (finally
+         (end-frame)))))
+
 (defn render-board
   "Renders the borders of a board."
   {:example "(render-board {:width 10 :height 5})"
