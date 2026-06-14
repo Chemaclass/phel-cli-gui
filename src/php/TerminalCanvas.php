@@ -24,14 +24,15 @@ final class TerminalCanvas
         $horizontal = str_repeat($style->horizontal(), $width - 2);
         $fill = str_repeat(Text::firstChar($fillChar, ' '), $width - 2);
 
-        $topAndBottom = $style->corner() . $horizontal . $style->corner();
+        $top = $style->topLeft() . $horizontal . $style->topRight();
+        $bottom = $style->bottomLeft() . $horizontal . $style->bottomRight();
         $bodyLine = $style->vertical() . $fill . $style->vertical();
 
-        $lines = [$topAndBottom];
+        $lines = [$top];
         if ($height > 2) {
             array_push($lines, ...array_fill(0, $height - 2, $bodyLine));
         }
-        $lines[] = $topAndBottom;
+        $lines[] = $bottom;
 
         return $lines;
     }

@@ -48,6 +48,19 @@ final class TerminalCanvasTest extends TestCase
         self::assertSame('+---+', $lines[3]);
     }
 
+    public function test_box_lines_use_distinct_corners(): void
+    {
+        $style = BorderStyle::rounded();
+
+        $lines = TerminalCanvas::boxLines(4, 3, $style);
+
+        self::assertSame([
+            '╭──╮',
+            '│  │',
+            '╰──╯',
+        ], $lines);
+    }
+
     public function test_box_lines_require_minimum_dimensions(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -44,4 +44,68 @@ final class BorderStyleTest extends TestCase
         self::assertSame('│', $style->vertical());
         self::assertSame('┼', $style->corner());
     }
+
+    public function test_with_chars_shares_one_glyph_across_all_corners(): void
+    {
+        $style = BorderStyle::withChars('-', '|', '*');
+
+        self::assertSame('*', $style->topLeft());
+        self::assertSame('*', $style->topRight());
+        self::assertSame('*', $style->bottomLeft());
+        self::assertSame('*', $style->bottomRight());
+        self::assertSame('*', $style->corner()); // back-compat: corner() == topLeft()
+    }
+
+    public function test_with_corners_keeps_each_corner_distinct(): void
+    {
+        $style = BorderStyle::withCorners('─', '│', '╭', '╮', '╰', '╯');
+
+        self::assertSame('╭', $style->topLeft());
+        self::assertSame('╮', $style->topRight());
+        self::assertSame('╰', $style->bottomLeft());
+        self::assertSame('╯', $style->bottomRight());
+        self::assertSame('╭', $style->corner());
+    }
+
+    public function test_with_corners_falls_back_missing_glyphs_to_default(): void
+    {
+        $style = BorderStyle::withCorners('─', '│', '╭', null, '', '╯');
+
+        self::assertSame('╭', $style->topLeft());
+        self::assertSame('+', $style->topRight());
+        self::assertSame('+', $style->bottomLeft());
+        self::assertSame('╯', $style->bottomRight());
+    }
+
+    /**
+     * @return iterable<string, array{BorderStyle, string, string, list<string>}>
+     */
+    public static function presetProvider(): iterable
+    {
+        yield 'ascii' => [BorderStyle::ascii(), '-', '|', ['+', '+', '+', '+']];
+        yield 'light' => [BorderStyle::light(), '─', '│', ['┌', '┐', '└', '┘']];
+        yield 'rounded' => [BorderStyle::rounded(), '─', '│', ['╭', '╮', '╰', '╯']];
+        yield 'heavy' => [BorderStyle::heavy(), '━', '┃', ['┏', '┓', '┗', '┛']];
+        yield 'double' => [BorderStyle::double(), '═', '║', ['╔', '╗', '╚', '╝']];
+    }
+
+    /**
+     * @param list<string> $corners [topLeft, topRight, bottomLeft, bottomRight]
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('presetProvider')]
+    public function test_presets_expose_their_glyphs(
+        BorderStyle $style,
+        string $horizontal,
+        string $vertical,
+        array $corners,
+    ): void {
+        self::assertSame($horizontal, $style->horizontal());
+        self::assertSame($vertical, $style->vertical());
+        self::assertSame($corners, [
+            $style->topLeft(),
+            $style->topRight(),
+            $style->bottomLeft(),
+            $style->bottomRight(),
+        ]);
+    }
 }

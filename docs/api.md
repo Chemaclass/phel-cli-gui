@@ -87,10 +87,34 @@ so a crash never strands the user on a blank page.
 | `(draw-horizontal-line x y length char)` / `(...style)` | Repeat `char` horizontally. |
 | `(draw-vertical-line x y length char)` / `(...style)` | Repeat `char` vertically. |
 | `(fill-region {:x :y :width :height :fill-char})` | Paint a rectangle with a fill character. |
-| `(draw-box {:x :y :width :height :border {:horizontal :vertical :corner} :fill-char})` | Framed box with optional fill + border chars. |
+| `(draw-box {:x :y :width :height :border <preset-or-map> :fill-char})` | Framed box with optional fill + border (preset keyword or char map). |
 
 `:fill-char` and border chars default to single-byte ASCII (`" "`, `-`, `|`, `+`).
 Multibyte characters (`─`, `│`, `┼`) are supported.
+
+### Border presets & distinct corners
+
+The `:border` of `draw-box`/`render-board` accepts more than a single shared
+corner:
+
+- A **preset keyword** — `:ascii` (default), `:light`, `:rounded`, `:heavy`,
+  `:double`:
+
+  ```phel
+  (draw-box {:x 0 :y 0 :width 20 :height 6 :border :rounded})
+  ```
+
+  | Preset | Glyphs |
+  |---|---|
+  | `:ascii` | `- \| + + + +` |
+  | `:light` | `─ │ ┌ ┐ └ ┘` |
+  | `:rounded` | `─ │ ╭ ╮ ╰ ╯` |
+  | `:heavy` | `━ ┃ ┏ ┓ ┗ ┛` |
+  | `:double` | `═ ║ ╔ ╗ ╚ ╝` |
+
+- A **map** — `{:horizontal :vertical :corner}` for a shared corner,
+  `:top-left`/`:top-right`/`:bottom-left`/`:bottom-right` for distinct corners,
+  or `:preset` to start from a named set.
 
 ## Frame batching
 

@@ -10,9 +10,36 @@
   []
   (TerminalGui/getInstance php/STDIN))
 
+(def- border-presets
+  {:ascii   (fn [] (BorderStyle/ascii))
+   :light   (fn [] (BorderStyle/light))
+   :rounded (fn [] (BorderStyle/rounded))
+   :heavy   (fn [] (BorderStyle/heavy))
+   :double  (fn [] (BorderStyle/double))})
+
+(defn- make-preset [name]
+  (when-let [factory (get border-presets name)]
+    (factory)))
+
 (defn- make-border-style
-  [{:keys [horizontal vertical corner]}]
-  (BorderStyle/withChars horizontal vertical corner))
+  "Resolves a border spec to a BorderStyle. Accepts nil (the ASCII default),
+  a preset keyword (:light :rounded :heavy :double :ascii), or a map of
+  {:horizontal :vertical :corner} for a shared corner — or :top-left/:top-right/
+  :bottom-left/:bottom-right for distinct corners, or :preset to start from one."
+  [border]
+  (cond
+    (nil? border)     nil
+    (keyword? border) (make-preset border)
+    :else
+    (let [{:keys [horizontal vertical corner preset
+                  top-left top-right bottom-left bottom-right]} border]
+      (cond
+        preset                                           (make-preset preset)
+        (or top-left top-right bottom-left bottom-right)
+        (BorderStyle/withCorners horizontal vertical
+                                 (or top-left corner) (or top-right corner)
+                                 (or bottom-left corner) (or bottom-right corner))
+        :else                                            (BorderStyle/withChars horizontal vertical corner)))))
 
 (def- key-map
   {"1b5b41" :up

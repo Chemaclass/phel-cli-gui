@@ -159,6 +159,15 @@ final class TerminalGuiTest extends TestCase
         self::assertSame(3, $this->gui->getMaxHeight());
     }
 
+    public function test_draw_box_renders_distinct_unicode_corners(): void
+    {
+        $this->gui->drawBox(0, 0, 4, 3, BorderStyle::rounded());
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString('╭──╮', $content);
+        self::assertStringContainsString('╰──╯', $content);
+    }
+
     public function test_draw_horizontal_line_writes_repeating_character(): void
     {
         $this->gui->drawHorizontalLine(1, 2, 6, '-');
