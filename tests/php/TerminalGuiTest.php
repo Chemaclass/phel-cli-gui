@@ -458,6 +458,50 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_diff_adjacent_runs_emit_no_move_between_them(): void
+    {
+        $this->gui->addAnsiStyle('red', '38;5;1');
+        $this->gui->addAnsiStyle('blue', '38;5;4');
+
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'ab', 'red');  // run at x=0, ends at x=2
+        $this->gui->render(2, 0, 'cd', 'blue'); // adjacent run at x=2 — no move needed
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        // Only the first run's absolute move ("…H") is emitted; the adjacent
+        // second run needs neither an absolute nor a relative move.
+        self::assertSame(1, substr_count($content, 'H'));
+        self::assertStringNotContainsString("\033[", substr($content, strpos($content, 'cd') - 5, 5));
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_same_row_gap_uses_relative_move(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'a'); // ends at x=1
+        $this->gui->render(3, 0, 'b'); // gap of 2 -> "\e[2C", not an absolute jump
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertStringContainsString("\033[2C", $content);
+        self::assertSame(1, substr_count($content, 'H')); // only the first run is absolute
+        $this->gui->endDiff();
+    }
+
+    public function test_diff_row_change_uses_absolute_move(): void
+    {
+        $this->gui->beginDiff(20, 3);
+        $this->gui->render(0, 0, 'a');
+        $this->gui->render(0, 1, 'b'); // different row -> absolute move
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertSame(2, substr_count($content, 'H'));
+        self::assertStringContainsString("\033[2;0H", $content); // second run absolute at row 1
+        $this->gui->endDiff();
+    }
+
     public function test_present_without_diff_session_is_noop(): void
     {
         $this->gui->present();

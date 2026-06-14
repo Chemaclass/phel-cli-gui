@@ -255,9 +255,31 @@ final class TerminalGui
             );
             $cursor = new Cursor($buffer);
 
+            // Track the cursor's logical (column, row) so same-row runs reposition
+            // with a short relative move — or none at all when adjacent — instead
+            // of a full absolute jump. Writing a run advances the cursor to the end
+            // of its text, so the next same-row run starts from there. Runs arrive
+            // left-to-right top-to-bottom, so same-row gaps are always forward;
+            // only a row change falls back to an absolute move. (-1 = unknown: the
+            // real cursor position at present()-time is not tracked, so the first
+            // run is always absolute.)
+            $curColumn = -1;
+            $curRow = -1;
+
             foreach ($runs as $run) {
-                $cursor->moveToPosition($run['x'], $run['y']);
+                $x = $run['x'];
+                $y = $run['y'];
+
+                if ($y === $curRow && $x > $curColumn) {
+                    $cursor->moveRight($x - $curColumn);
+                } elseif ($y !== $curRow || $x !== $curColumn) {
+                    $cursor->moveToPosition($x, $y);
+                }
+
                 $buffer->write($this->decorate($run['text'], $run['style']));
+
+                $curRow = $y;
+                $curColumn = $x + self::runWidth($run['text']);
             }
 
             $out = $buffer->fetch();
@@ -423,6 +445,12 @@ final class TerminalGui
     private function decorate(string $text, ?string $style): string
     {
         return ($style === null || $style === '') ? $text : "<$style>$text</$style>";
+    }
+
+    /** Columns a diff run advances the cursor: one cell per codepoint. */
+    private static function runWidth(string $text): int
+    {
+        return function_exists('mb_strlen') ? mb_strlen($text) : strlen($text);
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void
