@@ -312,4 +312,68 @@ final class TerminalGuiTest extends TestCase
 
         self::assertStringContainsString("\033[31;1mboom\033[39;22m", $this->output->fetch());
     }
+
+    public function test_add_ansi_style_renders_256_colour_sequence(): void
+    {
+        $this->gui->addAnsiStyle('lava', '38;5;196;48;5;52');
+        $this->gui->render(0, 0, 'x', 'lava');
+
+        // Text stays clean; the escape wraps it and bounds use the clean text.
+        self::assertStringContainsString("\033[38;5;196;48;5;52mx\033[0m", $this->output->fetch());
+        self::assertSame(0, $this->gui->getMaxWidth());
+    }
+
+    public function test_enter_alt_screen_emits_sequence_once(): void
+    {
+        $this->gui->enterAltScreen();
+        $this->gui->enterAltScreen(); // idempotent
+
+        self::assertSame(1, substr_count($this->output->fetch(), "\033[?1049h"));
+    }
+
+    public function test_leave_alt_screen_emits_restore_sequence(): void
+    {
+        $this->gui->enterAltScreen();
+        $this->output->fetch();
+
+        $this->gui->leaveAltScreen();
+        self::assertStringContainsString("\033[?1049l", $this->output->fetch());
+    }
+
+    public function test_leave_alt_screen_without_enter_is_noop(): void
+    {
+        $this->gui->leaveAltScreen();
+
+        self::assertStringNotContainsString("\033[?1049l", $this->output->fetch());
+    }
+
+    public function test_cleanup_leaves_alt_screen(): void
+    {
+        // cleanUp only runs on the registered singleton, so build one.
+        TerminalGui::resetInstance();
+        $output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, true);
+        $gui = TerminalGui::getInstance($this->inputStream, $output, new Cursor($output), false);
+        $output->fetch(); // drain init
+
+        $gui->enterAltScreen();
+        $output->fetch();
+
+        TerminalGui::resetInstance(); // triggers cleanUp on the singleton
+        self::assertStringContainsString("\033[?1049l", $output->fetch());
+    }
+
+    public function test_move_cursor_emits_absolute_position(): void
+    {
+        $this->gui->moveCursor(3, 2);
+
+        // Symfony Cursor::moveToPosition(col, row) emits "\e[{row+1};{col}H".
+        self::assertStringContainsString("\033[3;3H", $this->output->fetch());
+    }
+
+    public function test_cursor_home_moves_to_origin(): void
+    {
+        $this->gui->cursorHome();
+
+        self::assertStringContainsString("\033[1;0H", $this->output->fetch());
+    }
 }

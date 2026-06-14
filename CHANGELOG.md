@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Frame batching (`begin-frame`, `end-frame`, `with-frame`): buffer a frame's draws into a single write.
+- 256-color & truecolor styles: `add-color` (`:fg-256`/`:bg-256`/`:fg-rgb`/`:bg-rgb`/`:options`) and the pure `color->sgr` helper.
+- Alternate screen: `enter-alt-screen`, `leave-alt-screen`, `with-screen` macro (also left on cleanup).
+- Cursor: `move-cursor`, `cursor-home` for flicker-free overwrite-in-place repaints.
+- Input: `read-available` drains all pending bytes in one read for held-key responsiveness.
 
 ### Performance
 - `parse-key`: skip fallback-map allocation on known-key hits.

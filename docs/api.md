@@ -9,6 +9,7 @@ All public functions live in `phel-cli-gui.terminal-gui`.
 | `(read-input length)` | Read up to `length` bytes from stdin. Returns `{:raw s :hex h}`. |
 | `(read-key)` | Read one keypress. Returns a keyword or `{:char c}` or `nil` when no input. |
 | `(parse-key input)` | Pure helper: map a `read-input` result to a keyword / `{:char c}`. |
+| `(read-available)` / `(read-available max-bytes)` | Drain all pending input bytes in one read (raw string, `""` when idle). For held-key responsiveness. |
 
 Recognised keys: `:up` `:down` `:left` `:right` `:enter` `:escape` `:tab`
 `:backspace`. Anything else becomes `{:char raw}`.
@@ -36,9 +37,37 @@ Recognised keys: `:up` `:down` `:left` `:right` `:enter` `:escape` `:tab`
 |---|---|
 | `(hide-cursor)` | Hide the caret. |
 | `(show-cursor)` | Show the caret. |
+| `(move-cursor x y)` | Move the caret to an absolute `(x, y)` without drawing. |
+| `(cursor-home)` | Move the caret to the origin `(0, 0)`. |
 
 > Cursor is hidden automatically on init; call `(cleanup-gui)` (or let the
 > shutdown handler fire) to restore it.
+
+Pair `(cursor-home)` with overwriting renders to repaint a frame in place —
+no flickering full `(clear-screen)` each tick.
+
+## Full-screen
+
+| Function | Effect |
+|---|---|
+| `(enter-alt-screen)` | Switch to the alternate screen buffer (scrollback preserved). Idempotent. |
+| `(leave-alt-screen)` | Return to the normal screen, restoring prior content. |
+| `(with-screen & body)` | Macro: run `body` on the alt screen with the cursor hidden, restoring both on exit (even on throw). |
+
+The alternate screen is also left automatically on `(cleanup-gui)` / shutdown,
+so a crash never strands the user on a blank page.
+
+```phel
+(with-screen
+  (loop []
+    (with-frame
+      (cursor-home)
+      (draw-box {:x 0 :y 0 :width 40 :height 12})
+      (render 2 2 "Press q to quit"))
+    (when-not (= {:char "q"} (read-key))
+      (php/usleep 16000)
+      (recur))))
+```
 
 ## Clearing
 
@@ -101,6 +130,29 @@ takes a `style` argument.
 
 `:options` accepts Symfony output options: `"bold"`, `"underscore"`,
 `"blink"`, `"reverse"`, `"conceal"`.
+
+### 256-color & truecolor
+
+For the full xterm-256 palette or 24-bit RGB, register a style with
+`add-color` and use it the same way:
+
+```phel
+(add-color {:style-name "lava"  :fg-256 196 :bg-256 52 :options ["bold"]})
+(add-color {:style-name "ocean" :fg-rgb [120 180 255]})
+
+(render 0 0 "molten" "lava")
+(render 0 1 "wave"   "ocean")
+```
+
+| Key | Value |
+|---|---|
+| `:fg-256` / `:bg-256` | xterm-256 palette index, `0`–`255`. |
+| `:fg-rgb` / `:bg-rgb` | `[r g b]`, each `0`–`255` (24-bit truecolor). |
+| `:options` | `"bold"` `"dim"` `"italic"` `"underline"` `"blink"` `"reverse"` `"conceal"` `"strikethrough"`. |
+
+`(color->sgr spec)` is the pure helper underneath — it returns the raw ANSI
+SGR parameter string (e.g. `"38;5;196;1"`) if you want to build sequences
+yourself.
 
 ## Lifecycle
 

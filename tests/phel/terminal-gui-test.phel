@@ -1,6 +1,6 @@
 (ns phel-cli-gui-test.terminal-gui-test
   (:require phel.test :refer [deftest is testing])
-  (:require phel-cli-gui.terminal-gui :refer [parse-key]))
+  (:require phel-cli-gui.terminal-gui :refer [parse-key color->sgr]))
 
 ;; Pure-logic tests. GUI-side-effect functions are exercised from PHP.
 
@@ -35,3 +35,22 @@
 
 (deftest parse-key-unknown-escape-sequence-returns-raw-map
   (is (= {:char "\e[Z"} (parse-key {:raw "\e[Z" :hex "1b5b5a"}))))
+
+(deftest color->sgr-builds-256-colour-parameters
+  (is (= "38;5;196" (color->sgr {:fg-256 196})))
+  (is (= "48;5;52" (color->sgr {:bg-256 52})))
+  (is (= "38;5;196;48;5;52" (color->sgr {:fg-256 196 :bg-256 52}))))
+
+(deftest color->sgr-builds-truecolor-parameters
+  (is (= "38;2;255;128;0" (color->sgr {:fg-rgb [255 128 0]})))
+  (is (= "48;2;10;20;30" (color->sgr {:bg-rgb [10 20 30]}))))
+
+(deftest color->sgr-appends-option-codes
+  (testing "named options map to their SGR codes"
+           (is (= "38;5;196;1" (color->sgr {:fg-256 196 :options ["bold"]})))
+           (is (= "1;4" (color->sgr {:options ["bold" "underline"]})))
+           (is (= "4" (color->sgr {:options ["underscore"]})))))
+
+(deftest color->sgr-empty-spec-is-empty-string
+  (is (= "" (color->sgr {})))
+  (is (= "" (color->sgr {:options []}))))

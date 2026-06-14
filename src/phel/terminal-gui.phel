@@ -37,6 +37,47 @@
                                 background
                                 (to-php-array options))))
 
+(def- sgr-option-codes
+  {"bold"          "1"
+   "dim"           "2"
+   "italic"        "3"
+   "underline"     "4"
+   "underscore"    "4"
+   "blink"         "5"
+   "reverse"       "7"
+   "conceal"       "8"
+   "strikethrough" "9"})
+
+(defn- present? [x] (not (nil? x)))
+
+(defn- join-sgr [parts]
+  (reduce (fn [acc p] (if (= acc "") p (str acc ";" p))) "" parts))
+
+(defn color->sgr
+  "Pure helper: builds an ANSI SGR parameter string from a colour spec.
+  Accepts :fg-256/:bg-256 (0-255 xterm palette index), :fg-rgb/:bg-rgb
+  ([r g b]), and :options (e.g. [\"bold\" \"underline\"])."
+  {:example "(color->sgr {:fg-256 196 :options [\"bold\"]}) ; => \"38;5;196;1\""
+   :see-also ["add-color"]}
+  [{:keys [fg-256 bg-256 fg-rgb bg-rgb options]
+    :or {options []}}]
+  (let [color-parts (filter present?
+                            [(when fg-256 (str "38;5;" fg-256))
+                             (when bg-256 (str "48;5;" bg-256))
+                             (when fg-rgb (str "38;2;" (get fg-rgb 0) ";" (get fg-rgb 1) ";" (get fg-rgb 2)))
+                             (when bg-rgb (str "48;2;" (get bg-rgb 0) ";" (get bg-rgb 1) ";" (get bg-rgb 2)))])
+        opt-parts   (filter present? (map (fn [o] (get sgr-option-codes o)) options))]
+    (join-sgr (concat color-parts opt-parts))))
+
+(defn add-color
+  "Registers a named 256-colour / truecolor style usable in any render call,
+  exactly like a style from add-output-formatter. Takes the same colour keys
+  as color->sgr plus :style-name."
+  {:example "(add-color {:style-name \"lava\" :fg-256 196 :bg-256 52 :options [\"bold\"]})"
+   :see-also ["add-output-formatter" "color->sgr" "render"]}
+  [{:keys [style-name] :as spec}]
+  (.addAnsiStyle (get-gui) style-name (color->sgr spec)))
+
 (defn read-input
   "Reads the input stream and returns it in different formats."
   {:example "(read-input 3) ; => {:raw \"a\" :hex \"61\"}"}
@@ -60,6 +101,17 @@
   {:see-also ["parse-key" "read-input"]}
   []
   (parse-key (read-input 3)))
+
+(defn read-available
+  "Drains all currently-pending input bytes in one read and returns them as a
+  raw string (empty when nothing is pending). Lets a held key apply its motion
+  several times per frame instead of being throttled to one key per loop tick."
+  {:example "(read-available) ; => \"www\""
+   :see-also ["read-key" "read-input"]}
+  ([] (read-available 1024))
+  ([max-bytes]
+   (let [s (php/fread php/STDIN max-bytes)]
+     (if (= s false) "" s))))
 
 (defn terminal-size
   "Returns the current terminal dimensions as {:width w :height h}."
@@ -89,6 +141,20 @@
   {:see-also ["hide-cursor"]}
   []
   (.showCursor (get-gui)))
+
+(defn move-cursor
+  "Moves the cursor to an absolute (x, y) position without drawing."
+  {:example "(move-cursor 0 0)"
+   :see-also ["cursor-home" "render"]}
+  [x y]
+  (.moveCursor (get-gui) x y))
+
+(defn cursor-home
+  "Moves the cursor to the top-left origin (0, 0). Pair with overwriting
+  renders to repaint a frame in place without a flickering full clear."
+  {:see-also ["move-cursor" "clear-screen"]}
+  []
+  (.cursorHome (get-gui)))
 
 (defn clear-screen
   "Clears the entire screen."
@@ -136,6 +202,36 @@
        (do ~@body)
        (finally
          (end-frame)))))
+
+(defn enter-alt-screen
+  "Switches to the terminal's alternate screen buffer: a full-screen UI draws
+  on a fresh page and the user's scrollback is restored untouched on
+  leave-alt-screen (or cleanup-gui). Idempotent."
+  {:see-also ["leave-alt-screen" "with-screen"]}
+  []
+  (.enterAltScreen (get-gui)))
+
+(defn leave-alt-screen
+  "Leaves the alternate screen buffer, restoring the prior terminal content."
+  {:see-also ["enter-alt-screen" "with-screen"]}
+  []
+  (.leaveAltScreen (get-gui)))
+
+(defmacro with-screen
+  "Runs body on the alternate screen with the cursor hidden, restoring the
+  original screen and cursor on completion (even if body throws). Ideal for
+  full-screen apps and games."
+  {:example "(with-screen (clear-screen) (render 0 0 \"Hello\") (read-key))"
+   :see-also ["enter-alt-screen" "leave-alt-screen"]}
+  [& body]
+  `(do
+     (enter-alt-screen)
+     (hide-cursor)
+     (try
+       (do ~@body)
+       (finally
+         (show-cursor)
+         (leave-alt-screen)))))
 
 (defn render-board
   "Renders the borders of a board."
