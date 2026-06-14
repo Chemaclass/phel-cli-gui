@@ -98,6 +98,20 @@ tests/
   php/                      PHPUnit tests exercising the rendering layer
 ```
 
+## AI assistant config
+
+AI-assistant instructions are managed with [agnostic-ai](https://github.com/Chemaclass/agnostic-ai):
+the single source of truth lives under `.agnostic-ai/` and is transpiled to each
+tool's native files (`CLAUDE.md`, `AGENTS.md`, `.claude/…`), which are generated
+and git-ignored.
+
+```bash
+agnostic-ai sync          # regenerate per-target files after editing specs
+agnostic-ai sync --check  # CI gate: fail if outputs drift from specs
+```
+
+Edit specs in `.agnostic-ai/`, never the generated files.
+
 ## License
 
 MIT © [Jose M Valera Reales](https://chemaclass.com)
