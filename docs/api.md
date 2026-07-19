@@ -212,6 +212,15 @@ Terminal, ...) hold the repaint until the frame's write completes, so even a
 full-screen update appears atomically with no tearing. Terminals without
 support ignore the wrapper.
 
+Full screens are cheap: a 240×70 session costs ~0.25 ms per animated frame
+(`composer bench` measures both a windowed and a full-screen size). Apps that
+want more headroom can enable PHP's CLI JIT — the same loops run 2–4x faster:
+
+```bash
+php -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=64M \
+  vendor/bin/phel run src/phel/my-app.phel
+```
+
 Inside a session the back-buffer *is* the screen, so the clear/cursor verbs act
 on it rather than the terminal: `clear-screen` blanks the back-buffer (same as
 `clear-buffer`), `clear-line` blanks that row, and `clear-output`, `move-cursor`

@@ -82,6 +82,7 @@ composer install
 composer test          # Phel tests + PHPUnit (test:phel / test:php to scope)
 composer test:coverage # same suites with line-coverage reports (needs xdebug/pcov)
 composer format        # phel format
+composer bench         # render/paint/diff timings at 120x40 and 240x70
 ```
 
 Layout: `src/phel/` public API · `src/php/` rendering core (Symfony Console
