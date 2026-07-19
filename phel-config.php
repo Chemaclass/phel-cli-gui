@@ -6,4 +6,5 @@ use Phel\Config\PhelConfig;
 use Phel\Config\ProjectLayout;
 
 return PhelConfig::forProject(ProjectLayout::Nested, 'phel-cli-gui.terminal-gui')
-    ->withMainPhpPath('out/main.php');
+    ->withMainPhpPath('out/main.php')
+    ->withOptimizationLevel(2);
