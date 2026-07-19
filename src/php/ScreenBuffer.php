@@ -79,16 +79,20 @@ final class ScreenBuffer
         }
 
         $normalizedStyle = ($style === null || $style === '') ? null : $style;
-        $base = $row * $this->width;
+        $glyphs = Text::graphemes($text);
 
-        foreach (Text::graphemes($text) as $offset => $glyph) {
-            $cellColumn = $column + $offset;
-            if ($cellColumn < 0 || $cellColumn >= $this->width) {
-                continue;
-            }
+        // Clip to the visible [0, width) column range once, so the write loop
+        // below runs branch-free over exactly the cells that land on screen.
+        $first = $column < 0 ? -$column : 0;
+        $last = min(count($glyphs), $this->width - $column);
+        if ($first >= $last) {
+            return;
+        }
 
-            $idx = $base + $cellColumn;
-            $this->chars[$idx] = $glyph;
+        $base = $row * $this->width + $column;
+        for ($i = $first; $i < $last; $i++) {
+            $idx = $base + $i;
+            $this->chars[$idx] = $glyphs[$i];
             $this->styles[$idx] = $normalizedStyle;
         }
     }

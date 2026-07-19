@@ -6,7 +6,6 @@ namespace PhelCliGui;
 
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
-use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -221,13 +220,6 @@ final class TerminalGui
             return;
         }
 
-        $buffer = new BufferedOutput(
-            $this->output->getVerbosity(),
-            $this->output->isDecorated(),
-            $this->output->getFormatter(),
-        );
-        $cursor = new Cursor($buffer);
-
         // Track the cursor's logical (column, row) so same-row runs reposition
         // with a short relative move — or none at all when adjacent — instead
         // of a full absolute jump. Writing a run advances the cursor to the end
@@ -236,29 +228,30 @@ final class TerminalGui
         // only a row change falls back to an absolute move. (-1 = unknown: the
         // real cursor position at present()-time is not tracked, so the first
         // run is always absolute.)
+        // The escape sequences match Symfony Cursor's moveRight()/
+        // moveToPosition() byte-for-byte; building the payload as one string
+        // avoids a BufferedOutput + Cursor allocation per frame.
         $curColumn = -1;
         $curRow = -1;
+        $out = '';
 
         foreach ($runs as $run) {
             $x = $run['x'];
             $y = $run['y'];
 
             if ($y === $curRow && $x > $curColumn) {
-                $cursor->moveRight($x - $curColumn);
+                $out .= "\x1b[" . ($x - $curColumn) . 'C';
             } elseif ($y !== $curRow || $x !== $curColumn) {
-                $cursor->moveToPosition($x, $y);
+                $out .= "\x1b[" . ($y + 1) . ';' . $x . 'H';
             }
 
-            $this->writeStyled($buffer, $run['text'], $run['style']);
+            $out .= $this->applyStyle($run['text'], $run['style']);
 
             $curRow = $y;
-            $curColumn = $x + self::runWidth($run['text']);
+            $curColumn = $x + Text::codepointCount($run['text']);
         }
 
-        $out = $buffer->fetch();
-        if ($out !== '') {
-            $this->output->write($out, false, OutputInterface::OUTPUT_RAW);
-        }
+        $this->output->write($out, false, OutputInterface::OUTPUT_RAW);
     }
 
     private function activeCursor(): Cursor
@@ -442,25 +435,38 @@ final class TerminalGui
     }
 
     /**
-     * Writes text to an output, wrapping it in the named style only when one is
-     * given. Unstyled text goes out raw — skipping the formatter's tag parse,
-     * which is both faster and keeps literal '<...>' in user text intact
-     * instead of having it swallowed as a markup tag.
+     * Writes text to an output with its style already applied, always raw.
+     * Bypassing the formatter's tag parse is faster and keeps literal '<...>'
+     * in user text intact — styled or not — instead of having it swallowed
+     * as a markup tag.
      */
     private function writeStyled(OutputInterface $output, string $text, ?string $style): void
     {
-        if ($style === null || $style === '') {
-            $output->write($text, false, OutputInterface::OUTPUT_RAW);
-            return;
-        }
-
-        $output->write("<$style>$text</$style>");
+        $output->write($this->applyStyle($text, $style), false, OutputInterface::OUTPUT_RAW);
     }
 
-    /** Columns a diff run advances the cursor: one cell per codepoint. */
-    private static function runWidth(string $text): int
+    /**
+     * Resolves a named style against the registered formatter styles and wraps
+     * the text in its ANSI sequences (skipped when the output is undecorated).
+     * An unknown name fails fast instead of leaking markup to the screen.
+     */
+    private function applyStyle(string $text, ?string $style): string
     {
-        return function_exists('mb_strlen') ? mb_strlen($text) : strlen($text);
+        if ($style === null || $style === '') {
+            return $text;
+        }
+
+        $formatter = $this->output->getFormatter();
+        if (!$formatter->hasStyle($style)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Unknown style "%s". Register it first with add-color or add-output-formatter.',
+                $style,
+            ));
+        }
+
+        return $this->output->isDecorated()
+            ? $formatter->getStyle($style)->apply($text)
+            : $text;
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void

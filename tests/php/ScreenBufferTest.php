@@ -97,6 +97,52 @@ final class ScreenBufferTest extends TestCase
         );
     }
 
+    public function test_paint_clips_negative_columns(): void
+    {
+        $buffer = new ScreenBuffer(3, 1);
+        $buffer->paint(-1, 0, 'abc', null); // 'a' falls off the left edge
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => 'bc', 'style' => null]],
+            $buffer->diff(new ScreenBuffer(3, 1)),
+        );
+    }
+
+    public function test_paint_fully_out_of_bounds_is_noop(): void
+    {
+        $buffer = new ScreenBuffer(3, 1);
+        $buffer->paint(-5, 0, 'ab', null);
+        $buffer->paint(3, 0, 'ab', null);
+        $buffer->paint(0, 0, '', 'red');
+
+        self::assertSame([], $buffer->diff(new ScreenBuffer(3, 1)));
+    }
+
+    public function test_paint_normalizes_empty_style_to_unstyled(): void
+    {
+        $buffer = new ScreenBuffer(3, 1);
+        $buffer->paint(0, 0, 'a', '');
+        $buffer->paint(1, 0, 'b', null);
+
+        // '' and null are the same unstyled state, so the cells form one run.
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => 'ab', 'style' => null]],
+            $buffer->diff(new ScreenBuffer(3, 1)),
+        );
+    }
+
+    public function test_paint_stores_one_multibyte_glyph_per_cell(): void
+    {
+        $buffer = new ScreenBuffer(3, 1);
+        $buffer->paint(0, 0, '─│x', null);
+        $buffer->paint(1, 0, '║', null); // overwrite the middle cell
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => '─║x', 'style' => null]],
+            $buffer->diff(new ScreenBuffer(3, 1)),
+        );
+    }
+
     public function test_paint_ignores_out_of_range_rows(): void
     {
         $buffer = new ScreenBuffer(3, 1);
