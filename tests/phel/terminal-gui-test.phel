@@ -1,6 +1,6 @@
 (ns phel-cli-gui-test.terminal-gui-test
   (:require phel.test :refer [deftest is testing])
-  (:require phel-cli-gui.terminal-gui :refer [parse-key parse-keys color->sgr make-border-style]))
+  (:require phel-cli-gui.terminal-gui :refer [parse-key parse-keys color->sgr make-border-style on-resize]))
 
 ;; Pure-logic tests. GUI-side-effect functions are exercised from PHP.
 
@@ -106,6 +106,16 @@
 (deftest make-border-style-passes-resolved-instance-through
   (let [style (make-border-style :rounded)]
     (is (= "╭" (.topLeft (make-border-style style))))))
+
+(deftest on-resize-fires-handler-with-current-dimensions
+  (let [captured (php/new \ArrayObject)]
+    (on-resize (fn [dims] (php/aset captured "dims" dims)))
+    (php/posix_kill (php/posix_getpid) php/SIGWINCH)
+    (php/pcntl_signal_dispatch)
+    (let [dims (php/aget captured "dims")]
+      (is (not (nil? dims)))
+      (is (int? (get dims :width)))
+      (is (int? (get dims :height))))))
 
 (deftest color->sgr-builds-256-colour-parameters
   (is (= "38;5;196" (color->sgr {:fg-256 196})))

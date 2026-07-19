@@ -49,6 +49,11 @@ unknown escape sequences into `:escape` plus their following chars.
 |---|---|
 | `(terminal-size)` | `{:width w :height h}` of the current terminal. |
 | `(max-bounds)` | `{:width w :height h}` — max extent reached by renders on this instance. |
+| `(on-resize f)` | Registers `f` to run on terminal resize (`SIGWINCH`), receiving the new `{:width w :height h}`. |
+
+Diff sessions have a fixed size — reopen one from the resize handler (or
+compare sizes in the render loop) to adapt. See the
+[resize recipe](recipes.md#react-to-terminal-resizes).
 
 ## Cursor
 

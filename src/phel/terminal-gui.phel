@@ -219,6 +219,18 @@
     {:width  (.getWidth term)
      :height (.getHeight term)}))
 
+(defn on-resize
+  "Registers f to run whenever the terminal is resized (SIGWINCH). f receives
+  the new dimensions as {:width w :height h}. Enables asynchronous signal
+  dispatch so the handler fires without manual pcntl_signal_dispatch calls.
+  Diff sessions have a fixed size — reopen one from the handler (or compare
+  sizes in the render loop) to adapt to the new dimensions."
+  {:example "(on-resize (fn [{:keys [width height]}] (rebuild-ui width height)))"
+   :see-also ["terminal-size" "with-diff"]}
+  [f]
+  (php/pcntl_async_signals true)
+  (php/pcntl_signal php/SIGWINCH (fn [signo siginfo] (f (terminal-size)))))
+
 (defn max-bounds
   "Returns the maximum (x,y) extent reached by render/draw operations
   on the current GUI instance as {:width w :height h}."

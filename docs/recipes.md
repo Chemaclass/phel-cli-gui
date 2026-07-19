@@ -72,6 +72,21 @@ instances pass through `:border` unchanged — hoist the lookup out of the loop:
 (fill-region {:x 10 :y 4 :width 6 :height 2 :fill-char "█"})
 ```
 
+## React to terminal resizes
+
+A diff session is sized once, so track resizes and reopen it when the
+dimensions change:
+
+```phel
+(def state (php/new \ArrayObject))
+(php/aset state "size" (terminal-size))
+(on-resize (fn [new-size] (php/aset state "size" new-size)))
+
+;; in the render loop: when (php/aget state "size") no longer matches the
+;; session's dims -> (end-diff), (begin-diff (php/aget state "size")),
+;; (clear-screen), and repaint from blank.
+```
+
 ## Query the rendered area
 
 ```phel

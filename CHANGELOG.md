@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `on-resize` registers a `SIGWINCH` handler that receives the new `{:width w :height h}` — reopen a diff session from it (or compare sizes in the render loop) to adapt full-screen UIs to the new terminal dimensions.
 - Key parsing recognises navigation and function keys: `:home` `:end` `:page-up` `:page-down` `:insert` `:delete` and `:f1`–`:f4` (`parse-keys` matches longest sequences first; 4-byte tilde sequences need `read-keys`, as `read-key` reads 3 bytes).
 
 ## [0.13.0] - 2026-07-19
