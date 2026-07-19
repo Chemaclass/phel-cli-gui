@@ -11,6 +11,8 @@ and style output with named formatters.
 Powered by Symfony's [Console Cursor](https://symfony.com/doc/current/console/coloring.html),
 exposed behind a small, data-first Phel API.
 
+![Diff-rendered demo animation](docs/demo.gif)
+
 - Works with any TTY (ANSI-capable).
 - Zero globals — one managed `TerminalGui` singleton per process.
 - Raw key events, one per tick (`read-key`) or drained per frame (`read-keys`) — held keys stay responsive.

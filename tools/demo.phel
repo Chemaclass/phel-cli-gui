@@ -1,0 +1,36 @@
+(ns tools.demo
+  (:require phel-cli-gui.terminal-gui
+            :refer [with-screen with-diff clear-buffer draw-box render present
+                    add-color cleanup-gui]))
+
+# Scripted demo used by tools/demo.tape to record docs/demo.gif:
+# a diff-rendered animation — a heavy-bordered box sweeping inside a
+# rounded frame with a styled HUD — that runs ~6s and exits by itself.
+
+(add-color {:style-name "title" :fg-256 203 :options ["bold"]})
+(add-color {:style-name "body" :fg-256 75})
+(add-color {:style-name "hud" :fg-256 229})
+
+(def- frames 120)
+
+(defn- draw-frame [f]
+  (clear-buffer)
+  (draw-box {:x 0 :y 0 :width 60 :height 16 :border :rounded})
+  (render 2 1 "phel-cli-gui — diff rendering demo" "title")
+  (let [x (+ 2 (mod f 40))]
+    (draw-box {:x x :y 4 :width 12 :height 6 :border :heavy})
+    (render (+ x 3) 6 "hello" "body"))
+  (render 2 14 (str "frame " f " — only changed cells hit the terminal") "hud")
+  (present))
+
+(defn main []
+  (with-screen
+    (with-diff {:width 60 :height 16}
+      (loop [f 0]
+        (when (< f frames)
+          (draw-frame f)
+          (php/usleep 50000)
+          (recur (inc f))))))
+  (cleanup-gui))
+
+(main)
