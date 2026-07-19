@@ -12,7 +12,7 @@ final class Text
      * multibyte machinery can be skipped entirely — the common case for borders,
      * fills, and latin UI text on every hot render path.
      */
-    private const ASCII_PRINTABLE = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+    public const ASCII_PRINTABLE = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
     private static ?bool $hasMbSubstr = null;
     private static ?bool $hasMbStrSplit = null;

@@ -143,6 +143,71 @@ final class ScreenBufferTest extends TestCase
         );
     }
 
+    public function test_style_change_alone_marks_cell_changed(): void
+    {
+        $previous = new ScreenBuffer(3, 1);
+        $previous->paint(0, 0, 'abc', 'red');
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        $next->paint(1, 0, 'b', 'blue'); // same glyph, different style
+
+        self::assertSame(
+            [['x' => 1, 'y' => 0, 'text' => 'b', 'style' => 'blue']],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_ascii_overwrite_clears_multibyte_cells(): void
+    {
+        $buffer = new ScreenBuffer(3, 1);
+        $buffer->paint(0, 0, '─│x', null);
+        $buffer->paint(0, 0, 'ab', null); // ASCII fast path over two wide cells
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => 'abx', 'style' => null]],
+            $buffer->diff(new ScreenBuffer(3, 1)),
+        );
+    }
+
+    public function test_diff_detects_multibyte_glyph_swapped_for_another(): void
+    {
+        // Both frames store a sentinel byte for the cell, so the byte-level
+        // row comparison alone cannot see this change — the side table must.
+        $previous = new ScreenBuffer(5, 1);
+        $previous->paint(0, 0, 'a─b─c', null);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        $next->paint(3, 0, '║', null); // swap the second box glyph only
+
+        self::assertSame(
+            [['x' => 3, 'y' => 0, 'text' => '║', 'style' => null]],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_diff_detects_multibyte_glyph_replaced_and_removed(): void
+    {
+        $previous = new ScreenBuffer(4, 1);
+        $previous->paint(0, 0, '─x─x', null);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        $next->paint(0, 0, 'y', null);   // wide -> ASCII
+        $next->clearRow(0);              // wide entries dropped entirely
+        $next->paint(1, 0, 'x', null);
+        $next->paint(3, 0, 'x', null);
+
+        self::assertSame(
+            [
+                ['x' => 0, 'y' => 0, 'text' => ' ', 'style' => null],
+                ['x' => 2, 'y' => 0, 'text' => ' ', 'style' => null],
+            ],
+            $next->diff($baseline),
+        );
+    }
+
     public function test_paint_ignores_out_of_range_rows(): void
     {
         $buffer = new ScreenBuffer(3, 1);
