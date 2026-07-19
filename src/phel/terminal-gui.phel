@@ -21,15 +21,20 @@
   (when-let [factory (get border-presets name)]
     (factory)))
 
-(defn- make-border-style
+(defn make-border-style
   "Resolves a border spec to a BorderStyle. Accepts nil (the ASCII default),
-  a preset keyword (:light :rounded :heavy :double :ascii), or a map of
-  {:horizontal :vertical :corner} for a shared corner — or :top-left/:top-right/
-  :bottom-left/:bottom-right for distinct corners, or :preset to start from one."
+  a preset keyword (:light :rounded :heavy :double :ascii), an already-resolved
+  BorderStyle (returned unchanged — resolve once outside a render loop to skip
+  per-frame spec parsing), or a map of {:horizontal :vertical :corner} for a
+  shared corner — or :top-left/:top-right/:bottom-left/:bottom-right for
+  distinct corners, or :preset to start from one."
+  {:example "(make-border-style :rounded)"
+   :see-also ["draw-box" "render-board"]}
   [border]
   (cond
-    (nil? border)     nil
-    (keyword? border) (make-preset border)
+    (nil? border)                               nil
+    (php/is_a border "PhelCliGui\\BorderStyle") border
+    (keyword? border)                           (make-preset border)
     :else
     (let [{:keys [horizontal vertical corner preset
                   top-left top-right bottom-left bottom-right]} border]
@@ -136,6 +141,48 @@
   ([max-bytes]
    (let [s (php/fread php/STDIN max-bytes)]
      (if (= s false) "" s))))
+
+(defn- utf8-hex-len
+  "Hex characters spanned by one UTF-8 character whose lead byte is `lead`."
+  [lead]
+  (cond
+    (< lead 128) 2
+    (< lead 224) 4
+    (< lead 240) 6
+    :else        8))
+
+(defn parse-keys
+  "Pure helper: splits a raw chunk of input (as returned by read-available)
+  into the vector of key events it contains — each the value parse-key would
+  return. Handles arrow sequences, control keys, and multibyte characters.
+  Unknown escape sequences decompose into :escape plus their following chars."
+  {:example "(parse-keys \"ab\\e[A\") ; => [{:char \"a\"} {:char \"b\"} :up]"
+   :see-also ["read-keys" "parse-key" "read-available"]}
+  [raw]
+  (let [hex (php/bin2hex raw)
+        len (php/strlen hex)]
+    (loop [i   0
+           acc []]
+      (if (>= i len)
+        acc
+        (let [six (php/substr hex i 6)]
+          (if (get key-map six)
+            (recur (+ i 6) (push acc (get key-map six)))
+            (let [two   (php/substr hex i 2)
+                  known (get key-map two)]
+              (if known
+                (recur (+ i 2) (push acc known))
+                (let [n (utf8-hex-len (php/hexdec two))]
+                  (recur (+ i n) (push acc {:char (php/hex2bin (php/substr hex i n))})))))))))))
+
+(defn read-keys
+  "Drains all pending input and returns the vector of key events it contained
+  (empty when nothing is pending). A held arrow key thus applies its motion
+  several times in one frame instead of being throttled to one key per tick."
+  {:example "(read-keys) ; => [:up :up {:char \"w\"}]"
+   :see-also ["parse-keys" "read-key" "read-available"]}
+  []
+  (parse-keys (read-available)))
 
 (defn terminal-size
   "Returns the current terminal dimensions as {:width w :height h}."

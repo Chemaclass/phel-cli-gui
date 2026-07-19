@@ -16,7 +16,7 @@ exposed behind a small, data-first Phel API.
 
 - PHP 8.4+
 - `ext-pcntl`, `ext-posix`, `ext-readline`
-- Phel `^0.44`
+- Phel `^0.48`
 
 ## Install
 
@@ -71,8 +71,9 @@ vendor/bin/phel run src/phel/hello.phel
 
 ```bash
 composer install
-composer test     # Phel tests + PHPUnit (test:phel / test:php to scope)
-composer format   # phel format
+composer test          # Phel tests + PHPUnit (test:phel / test:php to scope)
+composer test:coverage # same suites with line-coverage reports (needs xdebug/pcov)
+composer format        # phel format
 ```
 
 Layout: `src/phel/` public API · `src/php/` rendering core (Symfony Console

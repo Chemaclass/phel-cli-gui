@@ -1,6 +1,6 @@
 (ns phel-cli-gui-test.terminal-gui-test
   (:require phel.test :refer [deftest is testing])
-  (:require phel-cli-gui.terminal-gui :refer [parse-key color->sgr]))
+  (:require phel-cli-gui.terminal-gui :refer [parse-key parse-keys color->sgr make-border-style]))
 
 ;; Pure-logic tests. GUI-side-effect functions are exercised from PHP.
 
@@ -35,6 +35,60 @@
 
 (deftest parse-key-unknown-escape-sequence-returns-raw-map
   (is (= {:char "\e[Z"} (parse-key {:raw "\e[Z" :hex "1b5b5a"}))))
+
+(deftest parse-keys-empty-input-is-empty-vector
+  (is (= [] (parse-keys ""))))
+
+(deftest parse-keys-splits-chars-and-arrows
+  (is (= [:up] (parse-keys "\e[A")))
+  (is (= [{:char "w"} {:char "w"}] (parse-keys "ww")))
+  (is (= [{:char "a"} :left {:char "b"}] (parse-keys "a\e[Db"))))
+
+(deftest parse-keys-recognises-control-keys
+  (is (= [:enter :tab] (parse-keys "\r\t")))
+  (is (= [:escape {:char "x"}] (parse-keys "\ex"))))
+
+(deftest parse-keys-preserves-multibyte-chars
+  (is (= [{:char "é"} {:char "ñ"}] (parse-keys "éñ"))))
+
+(deftest parse-keys-held-arrow-repeats-per-event
+  (is (= [:up :up :up] (parse-keys "\e[A\e[A\e[A"))))
+
+(deftest make-border-style-nil-returns-nil
+  (is (nil? (make-border-style nil))))
+
+(deftest make-border-style-resolves-preset-keywords
+  (is (= "─" (.horizontal (make-border-style :light))))
+  (is (= "╭" (.topLeft (make-border-style :rounded))))
+  (is (= "═" (.horizontal (make-border-style :double))))
+  (is (= "┃" (.vertical (make-border-style :heavy))))
+  (is (= "+" (.corner (make-border-style :ascii)))))
+
+(deftest make-border-style-unknown-preset-returns-nil
+  (is (nil? (make-border-style :nope))))
+
+(deftest make-border-style-map-with-shared-corner
+  (let [style (make-border-style {:horizontal "=" :vertical "!" :corner "*"})]
+    (is (= "=" (.horizontal style)))
+    (is (= "!" (.vertical style)))
+    (is (= "*" (.topLeft style)))
+    (is (= "*" (.bottomRight style)))))
+
+(deftest make-border-style-map-with-distinct-corners
+  (let [style (make-border-style {:horizontal "─" :vertical "│"
+                                  :top-left "╔" :top-right "╗"
+                                  :bottom-left "╚" :bottom-right "╝"})]
+    (is (= "╔" (.topLeft style)))
+    (is (= "╗" (.topRight style)))
+    (is (= "╚" (.bottomLeft style)))
+    (is (= "╝" (.bottomRight style)))))
+
+(deftest make-border-style-map-preset-key-starts-from-preset
+  (is (= "─" (.horizontal (make-border-style {:preset :light})))))
+
+(deftest make-border-style-passes-resolved-instance-through
+  (let [style (make-border-style :rounded)]
+    (is (= "╭" (.topLeft (make-border-style style))))))
 
 (deftest color->sgr-builds-256-colour-parameters
   (is (= "38;5;196" (color->sgr {:fg-256 196})))

@@ -10,9 +10,12 @@ All public functions live in `phel-cli-gui.terminal-gui`.
 | `(read-key)` | Read one keypress. Returns a keyword or `{:char c}` or `nil` when no input. |
 | `(parse-key input)` | Pure helper: map a `read-input` result to a keyword / `{:char c}`. |
 | `(read-available)` / `(read-available max-bytes)` | Drain all pending input bytes in one read (raw string, `""` when idle). For held-key responsiveness. |
+| `(read-keys)` | Drain all pending input and return a vector of key events (`[]` when idle). A held arrow applies several times per frame. |
+| `(parse-keys raw)` | Pure helper: split a raw input chunk into its vector of key events. |
 
 Recognised keys: `:up` `:down` `:left` `:right` `:enter` `:escape` `:tab`
-`:backspace`. Anything else becomes `{:char raw}`.
+`:backspace`. Anything else becomes `{:char raw}`. `parse-keys` decomposes
+unknown escape sequences into `:escape` plus their following chars.
 
 ```phel
 (case (read-key)
@@ -116,6 +119,11 @@ corner:
   `:top-left`/`:top-right`/`:bottom-left`/`:bottom-right` for distinct corners,
   or `:preset` to start from a named set.
 
+`(make-border-style spec)` is the pure resolver underneath — it returns the
+`BorderStyle` object for any spec above (or `nil` for `nil`). A resolved
+instance passes through unchanged, so resolve once outside a render loop to
+skip per-frame spec parsing.
+
 ## Frame batching
 
 By default every draw call writes to stdout immediately — one `write` per call.
@@ -214,6 +222,10 @@ For the full xterm-256 palette or 24-bit RGB, register a style with
 `(color->sgr spec)` is the pure helper underneath — it returns the raw ANSI
 SGR parameter string (e.g. `"38;5;196;1"`) if you want to build sequences
 yourself.
+
+Rendering with a style name that was never registered throws an
+`InvalidArgumentException` naming the style — a typo fails fast instead of
+leaking markup to the screen.
 
 ## Lifecycle
 

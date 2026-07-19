@@ -78,15 +78,24 @@ final class BorderStyleTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{BorderStyle, string, string, list<string>}>
+     * Presets are named, not constructed, so they instantiate inside the test
+     * body — data providers run before coverage collection starts.
+     *
+     * @return iterable<string, array{string, string, string, list<string>}>
      */
     public static function presetProvider(): iterable
     {
-        yield 'ascii' => [BorderStyle::ascii(), '-', '|', ['+', '+', '+', '+']];
-        yield 'light' => [BorderStyle::light(), '─', '│', ['┌', '┐', '└', '┘']];
-        yield 'rounded' => [BorderStyle::rounded(), '─', '│', ['╭', '╮', '╰', '╯']];
-        yield 'heavy' => [BorderStyle::heavy(), '━', '┃', ['┏', '┓', '┗', '┛']];
-        yield 'double' => [BorderStyle::double(), '═', '║', ['╔', '╗', '╚', '╝']];
+        yield 'ascii' => ['ascii', '-', '|', ['+', '+', '+', '+']];
+        yield 'light' => ['light', '─', '│', ['┌', '┐', '└', '┘']];
+        yield 'rounded' => ['rounded', '─', '│', ['╭', '╮', '╰', '╯']];
+        yield 'heavy' => ['heavy', '━', '┃', ['┏', '┓', '┗', '┛']];
+        yield 'double' => ['double', '═', '║', ['╔', '╗', '╚', '╝']];
+    }
+
+    public function test_corner_mirrors_top_left_for_the_single_corner_model(): void
+    {
+        self::assertSame('+', BorderStyle::ascii()->corner());
+        self::assertSame('╭', BorderStyle::rounded()->corner());
     }
 
     /**
@@ -94,11 +103,20 @@ final class BorderStyleTest extends TestCase
      */
     #[\PHPUnit\Framework\Attributes\DataProvider('presetProvider')]
     public function test_presets_expose_their_glyphs(
-        BorderStyle $style,
+        string $preset,
         string $horizontal,
         string $vertical,
         array $corners,
     ): void {
+        $style = match ($preset) {
+            'ascii' => BorderStyle::ascii(),
+            'light' => BorderStyle::light(),
+            'rounded' => BorderStyle::rounded(),
+            'heavy' => BorderStyle::heavy(),
+            'double' => BorderStyle::double(),
+            default => self::fail("Unknown preset $preset"),
+        };
+
         self::assertSame($horizontal, $style->horizontal());
         self::assertSame($vertical, $style->vertical());
         self::assertSame($corners, [

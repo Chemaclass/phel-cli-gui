@@ -22,4 +22,18 @@ final class AnsiStyleTest extends TestCase
 
         self::assertSame('plain', $style->apply('plain'));
     }
+
+    public function test_formatter_interface_setters_never_mutate_the_sgr(): void
+    {
+        // The style is defined entirely by its SGR string; the interface's
+        // mutators are contractual no-ops and must not change the output.
+        $style = new AnsiStyle('38;5;196');
+        $style->setForeground('blue');
+        $style->setBackground('white');
+        $style->setOption('bold');
+        $style->unsetOption('bold');
+        $style->setOptions(['underscore']);
+
+        self::assertSame("\033[38;5;196mboom\033[0m", $style->apply('boom'));
+    }
 }

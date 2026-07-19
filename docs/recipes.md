@@ -11,6 +11,19 @@ Short patterns for common tasks. See [api.md](api.md) for the full reference.
     (recur (step state (read-key)))))
 ```
 
+## Held-key responsiveness
+
+`read-key` yields at most one event per tick; a held arrow key floods stdin
+faster than that. `read-keys` drains everything pending so each queued press
+applies within the same frame.
+
+```phel
+(defn run []
+  (loop [state (initial-state)]
+    (php/usleep 16000)
+    (recur (reduce step state (read-keys)))))
+```
+
 ## Flicker-free full-screen loop (diff rendering)
 
 Repaint the back-buffer each frame; `present` writes only the cells that

@@ -240,6 +240,79 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_styled_text_keeps_literal_angle_brackets(): void
+    {
+        // Styles are applied directly instead of via markup tags, so
+        // markup-looking user text survives styling verbatim.
+        $this->gui->addOutputFormatter('danger', new OutputFormatterStyle('red'));
+        $this->gui->render(0, 0, '<x>', 'danger');
+
+        self::assertStringContainsString("\033[31m<x>\033[39m", $this->output->fetch());
+    }
+
+    public function test_undecorated_output_renders_styled_text_without_ansi(): void
+    {
+        TerminalGui::resetInstance();
+        $plainOutput = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, false);
+        $gui = TerminalGui::withStream(
+            inputStream: $this->inputStream,
+            output: $plainOutput,
+            cursor: new Cursor($plainOutput),
+            registerShutdownHandlers: false,
+        );
+        $gui->addOutputFormatter('danger', new OutputFormatterStyle('red'));
+        $plainOutput->fetch();
+
+        $gui->render(0, 0, 'boom', 'danger');
+
+        self::assertStringContainsString('boom', $plainOutput->fetch());
+
+        $gui->beginDiff(10, 1);
+        $gui->render(0, 0, 'quiet', 'danger');
+        $gui->present();
+
+        $content = $plainOutput->fetch();
+        self::assertStringContainsString('quiet', $content);
+        self::assertStringNotContainsString("\033[31m", $content);
+        $gui->endDiff();
+    }
+
+    public function test_diff_run_with_multibyte_text_advances_cursor_per_codepoint(): void
+    {
+        $this->gui->beginDiff(10, 1);
+        $this->gui->render(0, 0, '─│');  // two codepoints -> cursor ends at x=2
+        $this->gui->render(2, 0, 'x');   // adjacent: needs no move at all
+        $this->gui->present();
+        $content = $this->output->fetch();
+
+        self::assertSame(1, substr_count($content, 'H'));
+        self::assertStringNotContainsString('C', $content);
+        self::assertStringContainsString('─│x', $content);
+        $this->gui->endDiff();
+    }
+
+    public function test_unknown_style_fails_fast(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unknown style "nope"');
+
+        $this->gui->render(0, 0, 'text', 'nope');
+    }
+
+    public function test_unknown_style_in_diff_run_fails_fast_at_present(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'text', 'nope');
+
+        try {
+            $this->expectException(InvalidArgumentException::class);
+            $this->expectExceptionMessage('Unknown style "nope"');
+            $this->gui->present();
+        } finally {
+            $this->gui->endDiff();
+        }
+    }
+
     public function test_get_instance_returns_shared_singleton(): void
     {
         TerminalGui::resetInstance();
