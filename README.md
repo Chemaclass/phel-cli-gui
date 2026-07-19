@@ -1,5 +1,9 @@
 # Phel CLI GUI
 
+[![CI](https://github.com/Chemaclass/phel-cli-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/Chemaclass/phel-cli-gui/actions/workflows/ci.yml)
+[![Packagist](https://img.shields.io/packagist/v/chemaclass/phel-cli-gui)](https://packagist.org/packages/chemaclass/phel-cli-gui)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Build rich terminal interfaces in [Phel](https://phel-lang.org/) — render text
 at arbitrary coordinates, draw framed boxes, paint regions, read raw keypresses,
 and style output with named formatters.
@@ -9,8 +13,10 @@ exposed behind a small, data-first Phel API.
 
 - Works with any TTY (ANSI-capable).
 - Zero globals — one managed `TerminalGui` singleton per process.
-- Pure helpers (`parse-key`) are easy to test without a real terminal.
-- Diff rendering writes only the cells that changed each frame — see [docs/api.md](docs/api.md#diff-rendering).
+- Raw key events, one per tick (`read-key`) or drained per frame (`read-keys`) — held keys stay responsive.
+- Named styles from 4-bit colours up to xterm-256 and 24-bit truecolor.
+- Frame batching flushes a whole repaint in one write; diff rendering writes only the cells that changed — see [docs/api.md](docs/api.md#diff-rendering).
+- Pure helpers (`parse-keys`, `color->sgr`, `make-border-style`) are easy to test without a real terminal.
 
 ## Requirements
 

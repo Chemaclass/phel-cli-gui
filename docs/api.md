@@ -2,6 +2,18 @@
 
 All public functions live in `phel-cli-gui.terminal-gui`.
 
+## Conventions
+
+- Coordinates are 0-indexed: `x` is the column, `y` the row, `(0, 0)` top-left.
+- Simple verbs take positional args (`(render x y text style)`); multi-option
+  verbs take a map (`(draw-box {:x 0 :y 0 :width 10 :height 5 :border :light})`).
+- A trailing optional `style` is always the name of a registered style — see
+  [Styling](#styling). Unknown names throw, so typos fail fast.
+- The `parse-*` helpers, `color->sgr`, and `make-border-style` are pure —
+  testable without a terminal. Every other function draws through the managed
+  GUI singleton, which configures the terminal on first use and restores it on
+  shutdown.
+
 ## Input
 
 | Function | Purpose |

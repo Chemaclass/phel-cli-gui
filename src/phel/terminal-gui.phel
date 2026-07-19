@@ -59,8 +59,12 @@
    "08"     :backspace})
 
 (defn add-output-formatter
-  "Registers a named output formatter style."
-  {:example "(add-output-formatter {:style-name \"error\" :foreground \"red\" :options [\"bold\"]})"}
+  "Registers a named style usable in any render call that takes a style
+  argument. Takes :style-name plus Symfony colour names for :foreground /
+  :background and :options (e.g. [\"bold\"]). For the 256-colour palette or
+  truecolor RGB use add-color instead."
+  {:example "(add-output-formatter {:style-name \"error\" :foreground \"red\" :options [\"bold\"]})"
+   :see-also ["add-color" "render"]}
   [{:keys [style-name foreground background options]
     :or {options []}}]
   (.addOutputFormatter (get-gui)
@@ -108,8 +112,10 @@
   (.addAnsiStyle (get-gui) style-name (color->sgr spec)))
 
 (defn read-input
-  "Reads the input stream and returns it in different formats."
-  {:example "(read-input 3) ; => {:raw \"a\" :hex \"61\"}"}
+  "Reads up to `length` bytes from stdin (non-blocking) and returns them as
+  {:raw s :hex h} — the shape parse-key consumes. Empty when no input pends."
+  {:example "(read-input 3) ; => {:raw \"a\" :hex \"61\"}"
+   :see-also ["parse-key" "read-key" "read-available"]}
   [length]
   (let [raw (php/fread php/STDIN length)]
     {:raw raw :hex (php/bin2hex raw)}))
@@ -126,8 +132,10 @@
 
 (defn read-key
   "Reads one key press from stdin and returns a key keyword or {:char c}.
-  Returns nil when no input is available. See parse-key for the key set."
-  {:see-also ["parse-key" "read-input"]}
+  Returns nil when no input is available. See parse-key for the key set.
+  For draining several queued presses in one call, use read-keys."
+  {:example "(read-key) ; => :up"
+   :see-also ["read-keys" "parse-key" "read-input"]}
   []
   (parse-key (read-input 3)))
 
@@ -214,7 +222,8 @@
   (.showCursor (get-gui)))
 
 (defn move-cursor
-  "Moves the cursor to an absolute (x, y) position without drawing."
+  "Moves the cursor to an absolute (x, y) position without drawing.
+  No-op during a diff session — present owns cursor placement there."
   {:example "(move-cursor 0 0)"
    :see-also ["cursor-home" "render"]}
   [x y]
@@ -228,19 +237,23 @@
   (.cursorHome (get-gui)))
 
 (defn clear-screen
-  "Clears the entire screen."
-  {:see-also ["clear-output" "clear-line"]}
+  "Clears the entire screen. During a diff session the back-buffer is the
+  screen, so this blanks it instead (same as clear-buffer)."
+  {:see-also ["clear-output" "clear-line" "clear-buffer"]}
   []
   (.clearScreen (get-gui)))
 
 (defn clear-output
-  "Clears all output from the cursor's current position to the end of the screen."
+  "Clears all output from the cursor's current position to the end of the
+  screen. Cursor-relative, so it is a no-op during a diff session — blank
+  the area with clear-buffer or paint spaces instead."
   {:see-also ["clear-screen" "clear-line"]}
   []
   (.clearOutput (get-gui)))
 
 (defn clear-line
-  "Clears the output from the line."
+  "Clears one row (0-indexed). During a diff session this blanks that row
+  of the back-buffer instead of writing to the terminal."
   {:example "(clear-line 3)"
    :see-also ["clear-screen" "clear-output"]}
   [line]
@@ -352,23 +365,27 @@
          (leave-alt-screen)))))
 
 (defn render-board
-  "Renders the borders of a board."
-  {:example "(render-board {:width 10 :height 5})"
-   :see-also ["draw-box"]}
+  "Draws a rectangular border at the origin. `border-style` accepts the same
+  specs as draw-box's :border — a preset keyword, a char map, or a resolved
+  BorderStyle (see make-border-style). Defaults to ASCII."
+  {:example "(render-board {:width 10 :height 5} :rounded)"
+   :see-also ["draw-box" "make-border-style"]}
   ([dims] (render-board dims nil))
   ([{:keys [width height]} border-style]
    (.renderBoard (get-gui) width height (make-border-style border-style))))
 
 (defn render
-  "Render any text to a concrete position (x,y) in the terminal."
+  "Renders text at position (x, y). The optional `style` is the name of a
+  style registered via add-color or add-output-formatter — unknown names
+  throw, so typos fail fast instead of leaking markup."
   {:example "(render 0 0 \"Hello\" \"info\")"
-   :see-also ["render-text-block"]}
+   :see-also ["render-text-block" "add-color" "add-output-formatter"]}
   ([x y text] (render x y text ""))
   ([x y text style]
    (.render (get-gui) x y text style)))
 
 (defn render-text-block
-  "Render multiline text at a specific position."
+  "Renders multiline text starting at (x, y), one row per line."
   {:example "(render-text-block 0 0 \"line-1\\nline-2\")"
    :see-also ["render"]}
   ([x y text] (render-text-block x y text ""))
@@ -376,7 +393,8 @@
    (.renderTextBlock (get-gui) x y text style)))
 
 (defn draw-horizontal-line
-  "Draw a horizontal line using a given character."
+  "Draws a horizontal line of `length` cells starting at (x, y). Only the
+  first character of `char` is used."
   {:example "(draw-horizontal-line 0 0 10 \"-\")"
    :see-also ["draw-vertical-line" "draw-box"]}
   ([x y length char] (draw-horizontal-line x y length char ""))
@@ -384,7 +402,8 @@
    (.drawHorizontalLine (get-gui) x y length char style)))
 
 (defn draw-vertical-line
-  "Draw a vertical line using a given character."
+  "Draws a vertical line of `length` cells starting at (x, y). Only the
+  first character of `char` is used."
   {:example "(draw-vertical-line 0 0 5 \"|\")"
    :see-also ["draw-horizontal-line" "draw-box"]}
   ([x y length char] (draw-vertical-line x y length char ""))
@@ -400,14 +419,19 @@
   (.fillRegion (get-gui) x y width height fill-char))
 
 (defn draw-box
-  "Draw a box at a given position with optional fill and border styles."
-  {:example "(draw-box {:x 0 :y 0 :width 10 :height 5 :fill-char \".\"})"
-   :see-also ["render-board" "fill-region" "draw-horizontal-line" "draw-vertical-line"]}
+  "Draws a framed box at (x, y) with optional :fill-char (default space) and
+  :border — a preset keyword (:light :rounded :heavy :double :ascii), a char
+  map, or a resolved BorderStyle. See make-border-style for every spec form."
+  {:example "(draw-box {:x 0 :y 0 :width 10 :height 5 :border :rounded :fill-char \".\"})"
+   :see-also ["render-board" "fill-region" "make-border-style"]}
   [{:keys [x y width height border fill-char]
     :or {fill-char \space}}]
   (.drawBox (get-gui) x y width height (make-border-style border) fill-char))
 
 (defn cleanup-gui
-  "Cleanup the GUI singleton instance."
+  "Restores the terminal (cursor visible, stty mode, alt screen left) and
+  resets the GUI singleton. Registered automatically for shutdown and SIGINT —
+  call it manually only to tear the GUI down mid-process."
+  {:see-also ["with-screen" "show-cursor"]}
   []
   (TerminalGui/resetInstance))

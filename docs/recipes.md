@@ -42,6 +42,19 @@ changed. See [api.md](api.md#diff-rendering).
         (recur (inc n))))))
 ```
 
+## Pre-resolve a border for a render loop
+
+`make-border-style` returns the underlying `BorderStyle`, and resolved
+instances pass through `:border` unchanged — hoist the lookup out of the loop:
+
+```phel
+(def rounded (make-border-style :rounded))
+
+(loop []
+  (draw-box {:x 0 :y 0 :width 40 :height 12 :border rounded})
+  ...)
+```
+
 ## Bordered UI with colors
 
 ```phel
