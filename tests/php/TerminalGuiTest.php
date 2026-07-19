@@ -608,11 +608,11 @@ final class TerminalGuiTest extends TestCase
     {
         $this->gui->beginDiff(20, 1);
         $this->gui->render(0, 0, 'a'); // ends at x=1
-        $this->gui->render(3, 0, 'b'); // gap of 2 -> "\e[2C", not an absolute jump
+        $this->gui->render(8, 0, 'b'); // gap of 7 (too wide to merge) -> "\e[7C"
         $this->gui->present();
         $content = $this->output->fetch();
 
-        self::assertStringContainsString("\033[2C", $content);
+        self::assertStringContainsString("\033[7C", $content);
         self::assertSame(1, substr_count($content, 'H')); // only the first run is absolute
         $this->gui->endDiff();
     }

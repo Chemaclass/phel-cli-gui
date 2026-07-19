@@ -201,7 +201,9 @@ with the normal verbs; they paint into a back-buffer while a session is open.
 
 Each `present` writes only the dirty runs: changing one HUD digit on a 100×40
 screen drops a ~4.3 KB full repaint to a handful of bytes. Style boundaries and
-unchanged gaps split runs, so colour stays correct. Pair with `with-screen` and
+unchanged gaps split runs, so colour stays correct — except that a tiny
+same-style gap (up to 4 cells) is rewritten verbatim inside one run, because
+that costs fewer bytes than moving the cursor around it. Pair with `with-screen` and
 `clear-screen` once at startup so the first frame paints over a clean page.
 
 Every `present` (and `end-frame`) flush is wrapped in DEC 2026 *synchronized

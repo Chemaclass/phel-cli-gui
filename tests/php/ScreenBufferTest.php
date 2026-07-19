@@ -66,11 +66,49 @@ final class ScreenBufferTest extends TestCase
         );
     }
 
-    public function test_unchanged_gap_breaks_a_run(): void
+    public function test_small_unchanged_gap_merges_into_one_run(): void
     {
-        // "a_b" where the middle cell matches the previous frame: two runs.
+        // "a_b" where the middle cell matches the previous frame: rewriting
+        // the identical '_' costs one byte, a second run's cursor move costs
+        // several — the gap is absorbed into a single run.
         $previous = new ScreenBuffer(3, 1);
         $previous->paint(1, 0, '_', null);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        $next->paint(0, 0, 'a', null);
+        $next->paint(2, 0, 'b', null);
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => 'a_b', 'style' => null]],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_gap_wider_than_merge_window_splits_runs(): void
+    {
+        $previous = new ScreenBuffer(10, 1);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        $next->paint(0, 0, 'a', null);
+        $next->paint(6, 0, 'b', null); // 5 unchanged blanks between: too far
+
+        self::assertSame(
+            [
+                ['x' => 0, 'y' => 0, 'text' => 'a', 'style' => null],
+                ['x' => 6, 'y' => 0, 'text' => 'b', 'style' => null],
+            ],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_gap_with_different_style_splits_runs(): void
+    {
+        // The unchanged cell between the runs is styled: repainting it with
+        // the runs' unstyled state would change its colour, so no merge.
+        $previous = new ScreenBuffer(3, 1);
+        $previous->paint(1, 0, '_', 'dim');
         $baseline = $previous->snapshot();
 
         $next = $previous->snapshot();
@@ -82,6 +120,23 @@ final class ScreenBufferTest extends TestCase
                 ['x' => 0, 'y' => 0, 'text' => 'a', 'style' => null],
                 ['x' => 2, 'y' => 0, 'text' => 'b', 'style' => null],
             ],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_trailing_unchanged_cells_are_never_absorbed(): void
+    {
+        // Gap merging only bridges toward another change; a run must not
+        // drag unchanged cells behind the last changed one.
+        $previous = new ScreenBuffer(5, 1);
+        $previous->paint(0, 0, 'abcde', null);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        $next->paint(0, 0, 'X', null);
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => 'X', 'style' => null]],
             $next->diff($baseline),
         );
     }
@@ -199,11 +254,10 @@ final class ScreenBufferTest extends TestCase
         $next->paint(1, 0, 'x', null);
         $next->paint(3, 0, 'x', null);
 
+        // Cells 0 and 2 changed (wide glyphs blanked); the unchanged 'x'
+        // between them is absorbed by gap merging, the trailing 'x' is not.
         self::assertSame(
-            [
-                ['x' => 0, 'y' => 0, 'text' => ' ', 'style' => null],
-                ['x' => 2, 'y' => 0, 'text' => ' ', 'style' => null],
-            ],
+            [['x' => 0, 'y' => 0, 'text' => ' x ', 'style' => null]],
             $next->diff($baseline),
         );
     }

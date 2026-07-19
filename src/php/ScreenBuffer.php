@@ -27,6 +27,13 @@ final class ScreenBuffer
     /** Style-id byte for the unstyled state. */
     private const UNSTYLED = "\0";
 
+    /**
+     * Longest run of unchanged same-style cells absorbed into a run instead
+     * of splitting it: repositioning the cursor costs ~5-8 bytes of escape,
+     * so rewriting up to this many identical cells is the cheaper output.
+     */
+    private const GAP_MERGE = 4;
+
     /** @var array<int, string> one glyph byte per cell; self::WIDE = see $wide */
     private array $rowChars;
 
@@ -154,8 +161,10 @@ final class ScreenBuffer
     /**
      * Compares this buffer against `previous` and returns the minimal set of
      * runs to repaint. A run is a maximal horizontal span of cells that all
-     * (a) changed versus `previous` and (b) share one style. Unchanged cells
-     * and style boundaries break runs.
+     * (a) changed versus `previous` and (b) share one style. Style boundaries
+     * break runs; so do unchanged gaps, except that a gap of at most
+     * GAP_MERGE unchanged same-style cells is absorbed (rewritten verbatim)
+     * because that costs fewer bytes than repositioning the cursor.
      *
      * When the buffers differ in size every cell is treated as changed.
      *
@@ -236,7 +245,30 @@ final class ScreenBuffer
                         && $styles[$x] === $prevStyles[$x]
                         && ($chars[$x] !== self::WIDE || ($wide[$x] ?? null) === ($prevWide[$x] ?? null))
                     ) {
-                        break;
+                        // Unchanged cell: absorb it (and up to GAP_MERGE - 1
+                        // more) when another changed cell of this style follows
+                        // close by — rewriting a short identical gap beats the
+                        // cursor escape a separate run would cost.
+                        $next = $x + 1;
+                        $limit = min($last, $x + self::GAP_MERGE);
+                        while ($next <= $limit
+                            && $styles[$next] === $styleByte
+                            && $styles[$next] === $prevStyles[$next]
+                            && $chars[$next] === $prevChars[$next]
+                            && ($chars[$next] !== self::WIDE || ($wide[$next] ?? null) === ($prevWide[$next] ?? null))
+                        ) {
+                            $next++;
+                        }
+
+                        if ($next > $limit || $styles[$next] !== $styleByte) {
+                            break; // no same-style change within reach
+                        }
+
+                        for (; $x < $next; $x++) {
+                            $glyph = $chars[$x];
+                            $text .= $glyph === self::WIDE ? $wide[$x] : $glyph;
+                        }
+                        continue;
                     }
 
                     $glyph = $chars[$x];
