@@ -55,7 +55,12 @@
           "@test:php"
         ],
         "test:phel": "vendor/bin/phel test --parallel=auto",
-        "test:php": "vendor/bin/phpunit tests",
+        "test:php": "vendor/bin/phpunit",
+        "test:coverage": [
+            "@putenv XDEBUG_MODE=coverage",
+            "vendor/bin/phel test --coverage",
+            "vendor/bin/phpunit --coverage-text"
+        ],
         "phpstan": "vendor/bin/phpstan analyse",
         "format": "vendor/bin/phel format"
     }
