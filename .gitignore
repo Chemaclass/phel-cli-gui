@@ -14,11 +14,15 @@ local.phel
 
 # >>> agnostic-ai (managed) >>>
 # Generated paths. Edit specs, not this block. Run `agnostic-ai sync` to refresh.
+# Not committed: a fresh clone or `git worktree` lacks these until `agnostic-ai sync` runs (e.g. a post-checkout hook).
 /.agnostic-ai/.sync-state
-/.agnostic-ai/AGNOSTIC_AI.md
 /.agnostic-ai/packs/
-/.claude/
-/.codex/
+/.claude/agent-memory/
+/.claude/rules/
+/.claude/settings.json
+/.claude/settings.local.json
+/.claude/skills/
+/.codex/skills/
 /AGENTS.md
 /CLAUDE.md
 /agnostic-ai.local.yaml
