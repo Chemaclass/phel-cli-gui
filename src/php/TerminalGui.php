@@ -11,6 +11,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class TerminalGui
 {
+    /**
+     * DEC private mode 2026 (synchronized output): the terminal holds the
+     * repaint until the closing sequence arrives, so a batched frame appears
+     * atomically instead of tearing mid-write. Terminals without support
+     * ignore both sequences.
+     */
+    private const SYNC_BEGIN = "\x1b[?2026h";
+    private const SYNC_END = "\x1b[?2026l";
+
     private int $maxWidth = 0;
     private int $maxHeight = 0;
     private bool $cleanedUp = false;
@@ -181,7 +190,11 @@ final class TerminalGui
         $payload = $this->frame->end($this->maxWidth, $this->maxHeight);
 
         if ($payload !== null) {
-            $this->output->write($payload, false, OutputInterface::OUTPUT_RAW);
+            $this->output->write(
+                self::SYNC_BEGIN . $payload . self::SYNC_END,
+                false,
+                OutputInterface::OUTPUT_RAW,
+            );
         }
     }
 
@@ -251,7 +264,11 @@ final class TerminalGui
             $curColumn = $x + Text::codepointCount($run['text']);
         }
 
-        $this->output->write($out, false, OutputInterface::OUTPUT_RAW);
+        $this->output->write(
+            self::SYNC_BEGIN . $out . self::SYNC_END,
+            false,
+            OutputInterface::OUTPUT_RAW,
+        );
     }
 
     private function activeCursor(): Cursor

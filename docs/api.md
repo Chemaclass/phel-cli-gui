@@ -204,6 +204,12 @@ screen drops a ~4.3 KB full repaint to a handful of bytes. Style boundaries and
 unchanged gaps split runs, so colour stays correct. Pair with `with-screen` and
 `clear-screen` once at startup so the first frame paints over a clean page.
 
+Every `present` (and `end-frame`) flush is wrapped in DEC 2026 *synchronized
+output*: terminals that support it (kitty, iTerm2, WezTerm, Alacritty, Windows
+Terminal, ...) hold the repaint until the frame's write completes, so even a
+full-screen update appears atomically with no tearing. Terminals without
+support ignore the wrapper.
+
 Inside a session the back-buffer *is* the screen, so the clear/cursor verbs act
 on it rather than the terminal: `clear-screen` blanks the back-buffer (same as
 `clear-buffer`), `clear-line` blanks that row, and `clear-output`, `move-cursor`

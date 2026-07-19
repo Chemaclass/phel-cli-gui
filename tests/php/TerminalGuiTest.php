@@ -350,7 +350,20 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endFrame();
         $buffered = $this->output->fetch();
 
-        self::assertSame($immediate, $buffered);
+        // Identical bytes, wrapped in the synchronized-output guard so the
+        // whole flush appears atomically.
+        self::assertSame("\x1b[?2026h" . $immediate . "\x1b[?2026l", $buffered);
+    }
+
+    public function test_end_frame_wraps_flush_in_synchronized_output(): void
+    {
+        $this->gui->beginFrame();
+        $this->gui->render(0, 0, 'x');
+        $this->gui->endFrame();
+
+        $content = $this->output->fetch();
+        self::assertStringStartsWith("\x1b[?2026h", $content);
+        self::assertStringEndsWith("\x1b[?2026l", $content);
     }
 
     public function test_nested_frames_flush_only_on_outermost_end(): void
@@ -496,6 +509,18 @@ final class TerminalGuiTest extends TestCase
 
         // moveToPosition(3, 2) => "\e[3;3H" then the run text.
         self::assertStringContainsString("\033[3;3Hhello", $content);
+        $this->gui->endDiff();
+    }
+
+    public function test_present_wraps_payload_in_synchronized_output(): void
+    {
+        $this->gui->beginDiff(20, 1);
+        $this->gui->render(0, 0, 'hi');
+        $this->gui->present();
+
+        $content = $this->output->fetch();
+        self::assertStringStartsWith("\x1b[?2026h", $content);
+        self::assertStringEndsWith("\x1b[?2026l", $content);
         $this->gui->endDiff();
     }
 
