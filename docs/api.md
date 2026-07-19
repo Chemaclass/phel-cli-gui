@@ -116,6 +116,13 @@ so a crash never strands the user on a blank page.
 `:fill-char` and border chars default to single-byte ASCII (`" "`, `-`, `|`, `+`).
 Multibyte characters (`─`, `│`, `┼`) are supported.
 
+> **Single-width cells.** Every screen cell holds one codepoint and is assumed
+> to occupy one terminal column. Box-drawing glyphs satisfy that; *wide* glyphs
+> (CJK, emoji) render but occupy two columns on the terminal while the cursor
+> math counts one, so positions after them drift — most visibly inside a diff
+> session. Stick to single-width characters for diff-rendered UIs, or pad
+> manually around wide ones.
+
 ### Border presets & distinct corners
 
 The `:border` of `draw-box`/`render-board` accepts more than a single shared
