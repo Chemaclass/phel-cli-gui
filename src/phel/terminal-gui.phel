@@ -47,16 +47,28 @@
         :else                                            (BorderStyle/withChars horizontal vertical corner)))))
 
 (def- key-map
-  {"1b5b41" :up
-   "1b5b42" :down
-   "1b5b43" :right
-   "1b5b44" :left
-   "0d"     :enter
-   "0a"     :enter
-   "1b"     :escape
-   "09"     :tab
-   "7f"     :backspace
-   "08"     :backspace})
+  {"1b5b41"   :up
+   "1b5b42"   :down
+   "1b5b43"   :right
+   "1b5b44"   :left
+   "1b5b48"   :home
+   "1b5b46"   :end
+   "1b4f50"   :f1
+   "1b4f51"   :f2
+   "1b4f52"   :f3
+   "1b4f53"   :f4
+   "1b5b317e" :home
+   "1b5b327e" :insert
+   "1b5b337e" :delete
+   "1b5b347e" :end
+   "1b5b357e" :page-up
+   "1b5b367e" :page-down
+   "0d"       :enter
+   "0a"       :enter
+   "1b"       :escape
+   "09"       :tab
+   "7f"       :backspace
+   "08"       :backspace})
 
 (defn add-output-formatter
   "Registers a named style usable in any render call that takes a style
@@ -122,7 +134,8 @@
 
 (defn parse-key
   "Maps a read-input result to a key keyword or {:char raw}.
-  Known keys: :up :down :left :right :enter :escape :tab :backspace.
+  Known keys: :up :down :left :right :home :end :page-up :page-down
+  :insert :delete :f1-:f4 :enter :escape :tab :backspace.
   Empty input returns nil."
   {:example "(parse-key {:raw \"\\r\" :hex \"0d\"}) ; => :enter"
    :see-also ["read-key" "read-input"]}
@@ -133,7 +146,8 @@
 (defn read-key
   "Reads one key press from stdin and returns a key keyword or {:char c}.
   Returns nil when no input is available. See parse-key for the key set.
-  For draining several queued presses in one call, use read-keys."
+  Reads 3 bytes, so 4-byte sequences (:page-up :page-down :insert :delete)
+  arrive split — use read-keys for those and for draining queued presses."
   {:example "(read-key) ; => :up"
    :see-also ["read-keys" "parse-key" "read-input"]}
   []
@@ -173,9 +187,14 @@
            acc []]
       (if (>= i len)
         acc
-        (let [six (php/substr hex i 6)]
-          (if (get key-map six)
-            (recur (+ i 6) (push acc (get key-map six)))
+        # Longest escape sequence first: 4-byte (PgUp/PgDn/Ins/Del), then
+        # 3-byte (arrows/Home/End/F1-F4), then single control bytes.
+        (let [eight (php/substr hex i 8)
+              six   (php/substr hex i 6)]
+          (cond
+            (get key-map eight) (recur (+ i 8) (push acc (get key-map eight)))
+            (get key-map six)   (recur (+ i 6) (push acc (get key-map six)))
+            :else
             (let [two   (php/substr hex i 2)
                   known (get key-map two)]
               (if known

@@ -54,6 +54,23 @@
 (deftest parse-keys-held-arrow-repeats-per-event
   (is (= [:up :up :up] (parse-keys "\e[A\e[A\e[A"))))
 
+(deftest parse-keys-recognises-navigation-keys
+  (is (= [:home :end] (parse-keys "\e[H\e[F")))
+  (is (= [:page-up :page-down] (parse-keys "\e[5~\e[6~")))
+  (is (= [:insert :delete] (parse-keys "\e[2~\e[3~")))
+  (is (= [:home :end] (parse-keys "\e[1~\e[4~"))))
+
+(deftest parse-keys-recognises-function-keys
+  (is (= [:f1 :f2 :f3 :f4] (parse-keys "\eOP\eOQ\eOR\eOS"))))
+
+(deftest parse-keys-mixes-navigation-with-chars
+  (is (= [{:char "a"} :page-up {:char "b"}] (parse-keys "a\e[5~b"))))
+
+(deftest parse-key-recognises-navigation-keys
+  (is (= :home    (parse-key {:raw "\e[H" :hex "1b5b48"})))
+  (is (= :page-up (parse-key {:raw "\e[5~" :hex "1b5b357e"})))
+  (is (= :f1      (parse-key {:raw "\eOP" :hex "1b4f50"}))))
+
 (deftest make-border-style-nil-returns-nil
   (is (nil? (make-border-style nil))))
 

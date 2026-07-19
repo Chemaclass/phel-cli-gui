@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Key parsing recognises navigation and function keys: `:home` `:end` `:page-up` `:page-down` `:insert` `:delete` and `:f1`–`:f4` (`parse-keys` matches longest sequences first; 4-byte tilde sequences need `read-keys`, as `read-key` reads 3 bytes).
+
 ## [0.13.0] - 2026-07-19
 
 ### Added

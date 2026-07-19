@@ -25,9 +25,13 @@ All public functions live in `phel-cli-gui.terminal-gui`.
 | `(read-keys)` | Drain all pending input and return a vector of key events (`[]` when idle). A held arrow applies several times per frame. |
 | `(parse-keys raw)` | Pure helper: split a raw input chunk into its vector of key events. |
 
-Recognised keys: `:up` `:down` `:left` `:right` `:enter` `:escape` `:tab`
+Recognised keys: `:up` `:down` `:left` `:right` `:home` `:end` `:page-up`
+`:page-down` `:insert` `:delete` `:f1`–`:f4` `:enter` `:escape` `:tab`
 `:backspace`. Anything else becomes `{:char raw}`. `parse-keys` decomposes
 unknown escape sequences into `:escape` plus their following chars.
+
+`read-key` reads 3 bytes, so the 4-byte sequences (`:page-up` `:page-down`
+`:insert` `:delete`) arrive split — read those with `read-keys`.
 
 ```phel
 (case (read-key)
