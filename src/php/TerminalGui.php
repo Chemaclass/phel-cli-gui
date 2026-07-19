@@ -8,6 +8,7 @@ use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Terminal;
 
 final class TerminalGui
 {
@@ -26,6 +27,14 @@ final class TerminalGui
 
     /** Whether the alternate screen buffer is currently active. */
     private bool $inAltScreen = false;
+
+    /**
+     * Whether the open diff session spans the terminal's full width. Only
+     * then may present() collapse a trailing blank run into erase-to-EOL
+     * (\e[K), which wipes to the end of the *terminal* row — on a narrower
+     * session it would destroy content beyond the session's edge.
+     */
+    private bool $diffCoversTerminalWidth = false;
 
     /** Batches a frame's draws into one write (see FrameSession). */
     private readonly FrameSession $frame;
@@ -207,6 +216,7 @@ final class TerminalGui
     public function beginDiff(int $width, int $height): void
     {
         $this->diff->begin($width, $height);
+        $this->diffCoversTerminalWidth = $width >= (new Terminal())->getWidth();
     }
 
     /** Closes the diff session and releases both buffers. */
@@ -247,6 +257,7 @@ final class TerminalGui
         $curColumn = -1;
         $curRow = -1;
         $out = '';
+        $screenWidth = $this->diff->width();
 
         foreach ($runs as $run) {
             $x = $run['x'];
@@ -258,10 +269,27 @@ final class TerminalGui
                 $out .= "\x1b[" . ($y + 1) . ';' . $x . 'H';
             }
 
-            $out .= $this->applyStyle($run['text'], $run['style']);
+            $text = $run['text'];
+
+            // A trailing unstyled blank run collapses to erase-to-EOL: 3
+            // bytes instead of one space per cell. Only on full-width
+            // sessions (see $diffCoversTerminalWidth) and only unstyled —
+            // erased cells take the default background, not a style's.
+            if ($this->diffCoversTerminalWidth
+                && $run['style'] === null
+                && strspn($text, ' ') === strlen($text)
+                && $x + strlen($text) === $screenWidth
+            ) {
+                $out .= "\x1b[K"; // cursor does not move
+                $curRow = $y;
+                $curColumn = $x;
+                continue;
+            }
+
+            $out .= $this->applyStyle($text, $run['style']);
 
             $curRow = $y;
-            $curColumn = $x + Text::codepointCount($run['text']);
+            $curColumn = $x + Text::codepointCount($text);
         }
 
         $this->output->write(

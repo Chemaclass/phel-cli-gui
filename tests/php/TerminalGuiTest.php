@@ -630,6 +630,79 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_trailing_blank_run_collapses_to_erase_to_eol(): void
+    {
+        putenv('COLUMNS=10'); // session width == terminal width -> EL is safe
+
+        try {
+            $this->gui->beginDiff(10, 1);
+            $this->gui->render(0, 0, 'aaaaaaaaaa');
+            $this->gui->present();
+            $this->output->fetch();
+
+            $this->gui->clearBuffer();
+            $this->gui->render(0, 0, 'a'); // cells 1-9 blank out
+            $this->gui->present();
+            $content = $this->output->fetch();
+
+            self::assertStringContainsString("\x1b[K", $content);
+            self::assertStringNotContainsString('  ', $content); // no space run written
+        } finally {
+            putenv('COLUMNS');
+            $this->gui->endDiff();
+        }
+    }
+
+    public function test_narrow_session_writes_spaces_instead_of_erase_to_eol(): void
+    {
+        putenv('COLUMNS=80'); // session (10) narrower than the terminal (80)
+
+        try {
+            $this->gui->beginDiff(10, 1);
+            $this->gui->render(0, 0, 'aaaaaaaaaa');
+            $this->gui->present();
+            $this->output->fetch();
+
+            $this->gui->clearBuffer();
+            $this->gui->render(0, 0, 'a');
+            $this->gui->present();
+            $content = $this->output->fetch();
+
+            // EL would wipe terminal cells beyond the session's right edge.
+            self::assertStringNotContainsString("\x1b[K", $content);
+            self::assertStringContainsString('         ', $content); // 9 spaces
+        } finally {
+            putenv('COLUMNS');
+            $this->gui->endDiff();
+        }
+    }
+
+    public function test_styled_trailing_blanks_are_written_not_erased(): void
+    {
+        putenv('COLUMNS=10');
+
+        try {
+            $this->gui->addAnsiStyle('inverse', '7');
+            $this->gui->beginDiff(10, 1);
+            $this->gui->render(0, 0, 'aaaaaaaaaa');
+            $this->gui->present();
+            $this->output->fetch();
+
+            $this->gui->clearBuffer();
+            $this->gui->render(0, 0, 'a');
+            $this->gui->render(5, 0, '     ', 'inverse'); // styled blanks
+            $this->gui->present();
+            $content = $this->output->fetch();
+
+            // Erased cells take the default background; styled blanks must be
+            // painted so the style's background shows.
+            self::assertStringContainsString("\x1b[7m     \x1b[0m", $content);
+        } finally {
+            putenv('COLUMNS');
+            $this->gui->endDiff();
+        }
+    }
+
     public function test_diff_mode_clear_screen_blanks_buffer_not_terminal(): void
     {
         $this->gui->beginDiff(20, 1);
