@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Input: `read-keys` drains all pending input into a vector of key events (a held arrow applies its motion several times per frame) with the pure, UTF-8-aware `parse-keys` underneath.
+- `make-border-style` is now public: resolve a border spec once outside a render loop; resolved `BorderStyle` instances pass through `:border` unchanged.
+- Coverage tooling: `composer test:coverage` runs both suites with line-coverage reports (94.7% lines, 6/8 PHP classes at 100%), backed by a `phpunit.xml.dist` with the suite + coverage source configured.
+
+### Changed
+- **Breaking:** requires `phel-lang/phel-lang` `^0.48` (was `^0.44`); the library now compiles at optimization level 2.
+- **Breaking:** rendering with a style name that was never registered throws an `InvalidArgumentException` naming the style, instead of leaking literal markup tags to the screen.
+
+### Fixed
+- Styled text keeps literal `<...>` sequences: styles are applied directly instead of round-tripping through Symfony's markup parser, so markup-looking user text survives styling verbatim.
+
+### Performance
+- Rendering hot paths are ~1.5–1.9x faster per frame (120×40 diff-session benchmark): printable-ASCII fast paths and cached `mb_*` capability checks in `Text`, clip-once branch-free cell writes in `ScreenBuffer::paint`, and `present()` building the ANSI payload as a single string without per-frame `BufferedOutput`/`Cursor` allocations or formatter overhead.
+
 ## [0.12.0] - 2026-06-14
 
 ### Added
