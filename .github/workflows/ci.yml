@@ -50,6 +50,43 @@ jobs:
       - name: Test
         run: composer test
 
+  coverage:
+    name: Coverage (PHP 8.4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pcntl, posix, readline
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: vendor
+          key: composer-8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-8.4-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Build
+        run: composer build
+
+      - name: Coverage
+        run: |
+          composer test:coverage | tee coverage.txt
+          {
+            echo '## Test coverage'
+            echo '```'
+            grep -A30 'Code Coverage Report' coverage.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   release-script:
     name: Release script tests (bashunit)
     runs-on: ubuntu-latest
