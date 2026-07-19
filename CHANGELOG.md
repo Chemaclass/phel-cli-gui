@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-19
+
 ### Added
 - Input: `read-keys` drains all pending input into a vector of key events (a held arrow applies its motion several times per frame) with the pure, UTF-8-aware `parse-keys` underneath.
 - `make-border-style` is now public: resolve a border spec once outside a render loop; resolved `BorderStyle` instances pass through `:border` unchanged.
@@ -165,7 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release. Support PHP `^8.0` and Phel `^0.10`.
 
-[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.12.0...HEAD
+[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.13.0...HEAD
+[0.13.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.9.0...0.10.0
