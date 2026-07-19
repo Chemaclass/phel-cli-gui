@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screen-buffer rows are stored as packed byte strings (glyphs + interned style ids, multibyte glyphs in a side table): unchanged rows are rejected at memcmp speed and changed rows are XOR-scanned to their changed span before any per-cell work. The 120×40 diff-session benchmark runs ~4.4x faster per frame (0.53 → 0.12 ms; paints ~13x, diffs ~1.9x) — full-screen sessions scale the same way.
 - Diff runs absorb tiny unchanged same-style gaps (up to 4 cells) instead of splitting: rewriting a few identical cells costs fewer bytes than the cursor escape a separate run needs, so dense frames emit fewer, longer writes.
 - On full-terminal-width diff sessions, a trailing unstyled blank run collapses to erase-to-EOL (`\e[K`) — 3 bytes instead of one space per blanked cell. Narrower sessions keep writing spaces, since EL would wipe terminal content beyond the session's edge.
+- Heavily fragmented rows (4+ runs) are rewritten as one span split only at style boundaries when that is fewer bytes than the per-run cursor escapes — the diff picks whichever variant is smaller, so sparse rows still emit individual runs.
 
 ### Added
 - `on-resize` registers a `SIGWINCH` handler that receives the new `{:width w :height h}` — reopen a diff session from it (or compare sizes in the render loop) to adapt full-screen UIs to the new terminal dimensions.

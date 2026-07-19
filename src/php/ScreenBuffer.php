@@ -34,6 +34,12 @@ final class ScreenBuffer
      */
     private const GAP_MERGE = 4;
 
+    /** Rows fragmented into at least this many runs try a full-span rewrite. */
+    private const ROW_REWRITE_MIN_RUNS = 4;
+
+    /** Approximate byte cost of one cursor-move escape between runs. */
+    private const MOVE_COST = 7;
+
     /** @var array<int, string> one glyph byte per cell; self::WIDE = see $wide */
     private array $rowChars;
 
@@ -222,6 +228,11 @@ final class ScreenBuffer
             }
 
             $x = $first;
+            $rowRuns = [];
+            $rowStart = -1;
+            $rowEnd = $first;
+            $runCells = 0;
+
             while ($x <= $last) {
                 if ($sameSize
                     && $chars[$x] === $prevChars[$x]
@@ -276,16 +287,82 @@ final class ScreenBuffer
                     $x++;
                 }
 
-                $runs[] = [
+                if ($rowStart === -1) {
+                    $rowStart = $startX;
+                }
+                $rowEnd = $x;
+                $runCells += $x - $startX;
+
+                $rowRuns[] = [
                     'x' => $startX,
                     'y' => $y,
                     'text' => $text,
                     'style' => self::$styleNames[ord($styleByte)],
                 ];
             }
+
+            if ($rowStart !== -1 && count($rowRuns) >= self::ROW_REWRITE_MIN_RUNS) {
+                $rowRuns = $this->maybeRewriteRowSpan($y, $rowRuns, $rowStart, $rowEnd, $runCells);
+            }
+
+            foreach ($rowRuns as $rowRun) {
+                $runs[] = $rowRun;
+            }
         }
 
         return $runs;
+    }
+
+    /**
+     * A row fragmented into many runs can cost more in cursor escapes than
+     * rewriting its whole changed span once. Rebuilds the span [start, end)
+     * split only at style boundaries — unchanged cells repaint verbatim, so
+     * nothing changes visually — and returns whichever variant is fewer
+     * output bytes.
+     *
+     * @param non-empty-list<array{x:int,y:int,text:string,style:?string}> $rowRuns
+     *
+     * @return non-empty-list<array{x:int,y:int,text:string,style:?string}>
+     */
+    private function maybeRewriteRowSpan(int $y, array $rowRuns, int $start, int $end, int $runCells): array
+    {
+        $chars = $this->rowChars[$y];
+        $styles = $this->rowStyles[$y];
+        $wide = $this->wide[$y] ?? [];
+
+        $segments = [];
+        $segStart = $start;
+        $styleByte = $styles[$start];
+        $text = '';
+
+        for ($x = $start; $x < $end; $x++) {
+            if ($styles[$x] !== $styleByte) {
+                $segments[] = [
+                    'x' => $segStart,
+                    'y' => $y,
+                    'text' => $text,
+                    'style' => self::$styleNames[ord($styleByte)],
+                ];
+                $segStart = $x;
+                $styleByte = $styles[$x];
+                $text = '';
+            }
+
+            $glyph = $chars[$x];
+            $text .= $glyph === self::WIDE ? $wide[$x] : $glyph;
+        }
+
+        $segments[] = [
+            'x' => $segStart,
+            'y' => $y,
+            'text' => $text,
+            'style' => self::$styleNames[ord($styleByte)],
+        ];
+
+        $extraCells = ($end - $start) - $runCells;
+        $movesSaved = count($rowRuns) - count($segments);
+
+        return $extraCells <= $movesSaved * self::MOVE_COST ? $segments : $rowRuns;
     }
 
     /**

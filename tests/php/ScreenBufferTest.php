@@ -141,6 +141,76 @@ final class ScreenBufferTest extends TestCase
         );
     }
 
+    public function test_fragmented_row_rewrites_as_one_span_when_cheaper(): void
+    {
+        // Ten changed cells six columns apart: ten runs would cost ~7 escape
+        // bytes each, rewriting the 45 unchanged gap cells costs 45 — the row
+        // collapses to a single span.
+        $previous = new ScreenBuffer(60, 1);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        for ($x = 0; $x <= 54; $x += 6) {
+            $next->paint($x, 0, 'x', null);
+        }
+
+        self::assertSame(
+            [['x' => 0, 'y' => 0, 'text' => str_repeat('x     ', 9) . 'x', 'style' => null]],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_widely_spread_changes_keep_separate_runs(): void
+    {
+        // Four changed cells nine columns apart: rewriting 24 unchanged gap
+        // cells costs more than the three cursor moves it would save.
+        $previous = new ScreenBuffer(40, 1);
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        foreach ([0, 9, 18, 27] as $x) {
+            $next->paint($x, 0, 'x', null);
+        }
+
+        self::assertSame(
+            [
+                ['x' => 0, 'y' => 0, 'text' => 'x', 'style' => null],
+                ['x' => 9, 'y' => 0, 'text' => 'x', 'style' => null],
+                ['x' => 18, 'y' => 0, 'text' => 'x', 'style' => null],
+                ['x' => 27, 'y' => 0, 'text' => 'x', 'style' => null],
+            ],
+            $next->diff($baseline),
+        );
+    }
+
+    public function test_row_rewrite_splits_at_style_boundaries(): void
+    {
+        // Fragmented row whose span crosses a styled region: the rewrite may
+        // repaint unchanged cells, but only with their own style.
+        $previous = new ScreenBuffer(30, 1);
+        $previous->paint(12, 0, '____', 'dim');
+        $baseline = $previous->snapshot();
+
+        $next = $previous->snapshot();
+        foreach ([0, 6, 18, 24] as $x) {
+            $next->paint($x, 0, 'x', null);
+        }
+
+        $runs = $next->diff($baseline);
+
+        // However the row is emitted, replaying the runs must repaint the
+        // 'dim' cells with the 'dim' style only.
+        foreach ($runs as $run) {
+            if ($run['style'] === 'dim') {
+                self::assertSame('____', $run['text']);
+                self::assertSame(12, $run['x']);
+            } else {
+                self::assertStringNotContainsString('_', $run['text']);
+            }
+        }
+        self::assertNotEmpty($runs);
+    }
+
     public function test_paint_clips_out_of_bounds_columns(): void
     {
         $buffer = new ScreenBuffer(3, 1);
