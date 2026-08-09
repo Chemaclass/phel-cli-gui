@@ -227,6 +227,22 @@ final class TerminalGui
     public function endDiff(): void
     {
         $this->diff->end();
+        $this->diffCoversTerminalWidth = false;
+    }
+
+    /**
+     * The open diff session's dimensions as [width, height], or null when no
+     * session is open. Lets a render loop notice that the terminal has been
+     * resized away from the size its back-buffer was opened at.
+     *
+     * @return array{int, int}|null
+     */
+    public function diffSize(): ?array
+    {
+        $width = $this->diff->width();
+        $height = $this->diff->height();
+
+        return ($width === null || $height === null) ? null : [$width, $height];
     }
 
     /** Resets the back-buffer to blank. No-op when no diff session is open. */

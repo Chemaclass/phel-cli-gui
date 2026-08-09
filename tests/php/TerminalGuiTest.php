@@ -794,6 +794,44 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_diff_size_reports_the_open_session_dimensions(): void
+    {
+        self::assertNull($this->gui->diffSize());
+
+        $this->gui->beginDiff(30, 12);
+        self::assertSame([30, 12], $this->gui->diffSize());
+
+        $this->gui->endDiff();
+        self::assertNull($this->gui->diffSize());
+    }
+
+    public function test_reopening_a_narrower_session_stops_erasing_to_eol(): void
+    {
+        putenv('COLUMNS=10');
+
+        try {
+            // A full-width session may collapse trailing blanks to \e[K. After
+            // endDiff that permission must not leak into the next session,
+            // which is narrower than the terminal.
+            $this->gui->beginDiff(10, 1);
+            $this->gui->endDiff();
+
+            $this->gui->beginDiff(4, 1);
+            $this->gui->render(0, 0, 'aaaa');
+            $this->gui->present();
+            $this->output->fetch();
+
+            $this->gui->clearBuffer();
+            $this->gui->render(0, 0, 'a');
+            $this->gui->present();
+
+            self::assertStringNotContainsString("\x1b[K", $this->output->fetch());
+        } finally {
+            putenv('COLUMNS');
+            $this->gui->endDiff();
+        }
+    }
+
     public function test_present_without_diff_session_is_noop(): void
     {
         $this->gui->present();

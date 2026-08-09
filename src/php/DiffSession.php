@@ -28,6 +28,12 @@ final class DiffSession
         return $this->back?->width();
     }
 
+    /** Height of the open session's screen, or null when none is open. */
+    public function height(): ?int
+    {
+        return $this->back?->height();
+    }
+
     /** Opens a session sized to (width, height) with a blank back-buffer. */
     public function begin(int $width, int $height): void
     {
