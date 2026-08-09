@@ -81,8 +81,8 @@ dimensions change:
 (defn- resize-if-needed []
   (when (not= (diff-size) (terminal-size))
     (end-diff)
-    (begin-diff)                         ; no dims -> current terminal size
-    (clear-screen)))
+    (clear-screen)                       ; outside a session this wipes the
+    (begin-diff)))                       ; terminal; inside it, only the buffer
 
 (with-screen
   (begin-diff)                           ; full-screen session
@@ -98,6 +98,12 @@ dimensions change:
 `(diff-size)` returns `nil` outside a session, so the check also opens the
 first one. Reacting in the render loop rather than in `on-resize` keeps the
 buffer swap off the signal handler, where it could land mid-frame.
+
+Order matters: a new session assumes the screen is blank, and inside a session
+`clear-screen` blanks the back-buffer instead of the terminal. Clearing after
+`begin-diff` therefore leaves the old frame's cells on screen wherever the new
+one draws nothing — the borders of the previous, smaller layout survive as
+artifacts.
 
 ## Query the rendered area
 
