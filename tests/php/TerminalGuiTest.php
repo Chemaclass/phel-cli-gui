@@ -7,6 +7,7 @@ namespace PhelCliGui\Tests;
 use InvalidArgumentException;
 use PhelCliGui\BorderStyle;
 use PhelCliGui\TerminalGui;
+use PhelCliGui\TerminalSize;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -42,6 +43,7 @@ final class TerminalGuiTest extends TestCase
 
     protected function tearDown(): void
     {
+        TerminalSize::override(null, null);
         TerminalGui::resetInstance();
         if (is_resource($this->inputStream)) {
             fclose($this->inputStream);
@@ -674,7 +676,7 @@ final class TerminalGuiTest extends TestCase
 
     public function test_trailing_blank_run_collapses_to_erase_to_eol(): void
     {
-        putenv('COLUMNS=10'); // session width == terminal width -> EL is safe
+        TerminalSize::override(10, 24); // session width == terminal width -> EL is safe
 
         try {
             $this->gui->beginDiff(10, 1);
@@ -690,14 +692,14 @@ final class TerminalGuiTest extends TestCase
             self::assertStringContainsString("\x1b[K", $content);
             self::assertStringNotContainsString('  ', $content); // no space run written
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }
 
     public function test_narrow_session_writes_spaces_instead_of_erase_to_eol(): void
     {
-        putenv('COLUMNS=80'); // session (10) narrower than the terminal (80)
+        TerminalSize::override(80, 24); // session (10) narrower than the terminal (80)
 
         try {
             $this->gui->beginDiff(10, 1);
@@ -714,14 +716,14 @@ final class TerminalGuiTest extends TestCase
             self::assertStringNotContainsString("\x1b[K", $content);
             self::assertStringContainsString('         ', $content); // 9 spaces
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }
 
     public function test_styled_trailing_blanks_are_written_not_erased(): void
     {
-        putenv('COLUMNS=10');
+        TerminalSize::override(10, 24);
 
         try {
             $this->gui->addAnsiStyle('inverse', '7');
@@ -740,7 +742,7 @@ final class TerminalGuiTest extends TestCase
             // painted so the style's background shows.
             self::assertStringContainsString("\x1b[7m     \x1b[0m", $content);
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }
@@ -794,6 +796,34 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_init_keeps_a_resize_handler_the_app_installed_first(): void
+    {
+        // The GUI installs its own SIGWINCH handler to keep the size cache
+        // honest, but on-resize may have registered one before the first draw
+        // brought the singleton into being — clobbering it would silently stop
+        // the app's resize callback from ever firing.
+        $previousWinch = pcntl_signal_get_handler(SIGWINCH);
+        $previousInt = pcntl_signal_get_handler(SIGINT);
+        $appHandler = static function (): void {};
+        pcntl_signal(SIGWINCH, $appHandler);
+
+        try {
+            TerminalGui::resetInstance();
+            $output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, true);
+            TerminalGui::withStream(
+                inputStream: $this->inputStream,
+                output: $output,
+                cursor: new Cursor($output),
+                registerShutdownHandlers: true,
+            );
+
+            self::assertSame($appHandler, pcntl_signal_get_handler(SIGWINCH));
+        } finally {
+            pcntl_signal(SIGWINCH, $previousWinch);
+            pcntl_signal(SIGINT, $previousInt);
+        }
+    }
+
     public function test_diff_size_reports_the_open_session_dimensions(): void
     {
         self::assertNull($this->gui->diffSize());
@@ -807,7 +837,7 @@ final class TerminalGuiTest extends TestCase
 
     public function test_reopening_a_narrower_session_stops_erasing_to_eol(): void
     {
-        putenv('COLUMNS=10');
+        TerminalSize::override(10, 24);
 
         try {
             // A full-width session may collapse trailing blanks to \e[K. After
@@ -827,7 +857,7 @@ final class TerminalGuiTest extends TestCase
 
             self::assertStringNotContainsString("\x1b[K", $this->output->fetch());
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }

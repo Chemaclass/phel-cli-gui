@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `terminal-size` reports the terminal's current dimensions instead of the ones it had at startup, so `on-resize` hands its callback the size the terminal was just resized *to*. Symfony's `Terminal` memoises its probe for the life of the process and lets `COLUMNS`/`LINES` outrank it — and shells export those, updating them on resize for themselves only, so a child process inherits a snapshot frozen at launch. The size is now measured directly, cached, and refreshed on `SIGWINCH`; `TerminalSize::override()` sets it explicitly when a caller already knows it.
+- Renders land on the column they were given. `Cursor::moveToPosition()` writes the column into the CUP escape unincremented while CUP counts columns from 1, so every draw appeared one cell to the left of its coordinate and columns 0 and 1 collapsed onto the same cell. Immediate mode, frame batching and `present` all shared that construction and are all corrected. A UI that was nudged right by one column to compensate should drop the nudge.
+- `end-diff` clears the flag that lets `present` collapse trailing blanks to erase-to-EOL. It previously leaked from a full-terminal-width session into a narrower one opened afterwards, where `\e[K` wiped terminal cells past the session's right edge.
+
+### Performance
+- Diff rows are scanned with C string operations instead of a per-cell PHP loop. The XOR mask that already located a row's changed span is made exact (the sentinel-byte collision between two different multibyte glyphs is marked explicitly) and now drives the whole scan: skipping unchanged cells, extending a run, capping it at a style boundary and absorbing a short gap are each a `strspn`/`strcspn`, and a run's text is one `substr`. Diffing is ~9x faster per frame at 120x40 (0.155 -> 0.017 ms) and ~14x at 240x70 (0.520 -> 0.038 ms); the full pipeline is ~1.6x faster at both sizes.
+- The printable-ASCII fast-path test uses a PCRE range scan instead of `strspn` against a 95-character list, which PHP compares byte-by-byte linearly (~47 comparisons per byte).
+- A draw emits its cursor move and its text as one write instead of one write each, halving immediate-mode syscalls; named styles resolve once per instance instead of going through `hasStyle()`/`getStyle()` on every run `present` emits.
+
+### Added
+- `(begin-diff)` with no argument — or with `:width`/`:height` missing from the map — sizes the session to the current terminal.
+- `(diff-size)` returns the open diff session's `{:width w :height h}`, or `nil` when none is open, so a render loop can tell that the terminal has been resized away from the size its back-buffer was opened at.
+
+### Changed
+- Requires Phel `^0.49`. Symfony Console is now `^7.4 || ^8.0` (the lock resolves to 8.0); the dev suite runs on PHPUnit 12.
+
 ## [0.14.0] - 2026-07-19
 
 ### Performance

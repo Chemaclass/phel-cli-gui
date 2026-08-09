@@ -47,13 +47,18 @@ unknown escape sequences into `:escape` plus their following chars.
 
 | Function | Returns |
 |---|---|
-| `(terminal-size)` | `{:width w :height h}` of the current terminal. |
+| `(terminal-size)` | `{:width w :height h}` of the current terminal, re-measured after a resize. |
 | `(max-bounds)` | `{:width w :height h}` — max extent reached by renders on this instance. |
 | `(on-resize f)` | Registers `f` to run on terminal resize (`SIGWINCH`), receiving the new `{:width w :height h}`. |
 
+`terminal-size` measures the terminal itself rather than trusting `COLUMNS` /
+`LINES`: shells export those and update them on resize for themselves only, so
+a child process inherits a value frozen at launch. The measurement is cached
+and refreshed on `SIGWINCH`, so calling it every frame is free.
+
 Diff sessions have a fixed size — reopen one from the resize handler (or
-compare sizes in the render loop) to adapt. See the
-[resize recipe](recipes.md#react-to-terminal-resizes).
+compare `(diff-size)` against `(terminal-size)` in the render loop) to adapt.
+See the [resize recipe](recipes.md#react-to-terminal-resizes).
 
 ## Cursor
 
@@ -182,11 +187,12 @@ with the normal verbs; they paint into a back-buffer while a session is open.
 
 | Function | Effect |
 |---|---|
-| `(begin-diff {:width w :height h})` | Open a diff session sized to the screen. Draw verbs now paint into the back-buffer. |
+| `(begin-diff {:width w :height h})` / `(begin-diff)` | Open a diff session sized to the screen. Draw verbs now paint into the back-buffer. A missing `:width`/`:height` — or no argument at all — defaults to the terminal size. |
 | `(clear-buffer)` | Reset the back-buffer to blank. Run at the top of each frame. |
 | `(present)` | Diff against the last frame and write only the changed runs, in one write. |
+| `(diff-size)` | `{:width w :height h}` of the open session, or `nil` when none is open. |
 | `(end-diff)` | Close the session and release both buffers. |
-| `(with-diff {:width w :height h} & body)` | Macro: run `body` inside a session, closing it on completion (even on throw). |
+| `(with-diff {:width w :height h} & body)` | Macro: run `body` inside a session, closing it on completion (even on throw). `nil` dims size it to the terminal. |
 
 ```phel
 (with-screen
@@ -212,9 +218,10 @@ Terminal, ...) hold the repaint until the frame's write completes, so even a
 full-screen update appears atomically with no tearing. Terminals without
 support ignore the wrapper.
 
-Full screens are cheap: a 240×70 session costs ~0.25 ms per animated frame
-(`composer bench` measures both a windowed and a full-screen size). Apps that
-want more headroom can enable PHP's CLI JIT — the same loops run 2–4x faster:
+Full screens are cheap: a 240×70 session costs ~0.16 ms per animated frame
+(~0.08 ms at 120×40), of which the diff itself is ~0.04 ms — `composer bench`
+measures both sizes. Apps that want more headroom can enable PHP's CLI JIT —
+the same loops run 2–4x faster:
 
 ```bash
 php -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=64M \

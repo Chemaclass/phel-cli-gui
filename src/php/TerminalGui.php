@@ -8,7 +8,6 @@ use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Terminal;
 
 final class TerminalGui
 {
@@ -81,10 +80,25 @@ final class TerminalGui
 
         if ($registerShutdownHandlers) {
             register_shutdown_function(static fn () => $self->cleanUp());
+
+            // Handlers only run when signals are dispatched; without this the
+            // SIGINT clean-up below stays pending instead of restoring the
+            // terminal, and the size cache never learns about a resize.
+            pcntl_async_signals(true);
+
             pcntl_signal(SIGINT, static function () use ($self): void {
                 $self->cleanUp();
                 exit;
             });
+
+            // Keep the size cache honest across resizes — but never at the cost
+            // of a handler the app already installed. on-resize invalidates on
+            // its own, and it may well have run before the first draw brought
+            // this singleton into being.
+            $installed = pcntl_signal_get_handler(SIGWINCH);
+            if ($installed === SIG_DFL || $installed === SIG_IGN) {
+                pcntl_signal(SIGWINCH, static fn () => TerminalSize::invalidate());
+            }
         }
 
         return $self;
@@ -220,7 +234,7 @@ final class TerminalGui
     public function beginDiff(int $width, int $height): void
     {
         $this->diff->begin($width, $height);
-        $this->diffCoversTerminalWidth = $width >= (new Terminal())->getWidth();
+        $this->diffCoversTerminalWidth = $width >= TerminalSize::width();
     }
 
     /** Closes the diff session and releases both buffers. */
@@ -228,6 +242,17 @@ final class TerminalGui
     {
         $this->diff->end();
         $this->diffCoversTerminalWidth = false;
+    }
+
+    /**
+     * The terminal's current dimensions as [width, height], re-measured after
+     * a resize rather than frozen at the size it had on startup.
+     *
+     * @return array{int, int}
+     */
+    public function terminalSize(): array
+    {
+        return TerminalSize::get();
     }
 
     /**
