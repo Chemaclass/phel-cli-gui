@@ -78,14 +78,32 @@ A diff session is sized once, so track resizes and reopen it when the
 dimensions change:
 
 ```phel
-(def state (php/new \ArrayObject))
-(php/aset state "size" (terminal-size))
-(on-resize (fn [new-size] (php/aset state "size" new-size)))
+(defn- resize-if-needed []
+  (when (not= (diff-size) (terminal-size))
+    (end-diff)
+    (clear-screen)                       ; outside a session this wipes the
+    (begin-diff)))                       ; terminal; inside it, only the buffer
 
-;; in the render loop: when (php/aget state "size") no longer matches the
-;; session's dims -> (end-diff), (begin-diff (php/aget state "size")),
-;; (clear-screen), and repaint from blank.
+(with-screen
+  (begin-diff)                           ; full-screen session
+  (loop []
+    (resize-if-needed)                   ; repaints from blank after a resize
+    (clear-buffer)
+    (draw-box {:x 0 :y 0 :width 40 :height 12})
+    (present)
+    (php/usleep 16000)
+    (recur)))
 ```
+
+`(diff-size)` returns `nil` outside a session, so the check also opens the
+first one. Reacting in the render loop rather than in `on-resize` keeps the
+buffer swap off the signal handler, where it could land mid-frame.
+
+Order matters: a new session assumes the screen is blank, and inside a session
+`clear-screen` blanks the back-buffer instead of the terminal. Clearing after
+`begin-diff` therefore leaves the old frame's cells on screen wherever the new
+one draws nothing — the borders of the previous, smaller layout survive as
+artifacts.
 
 ## Query the rendered area
 

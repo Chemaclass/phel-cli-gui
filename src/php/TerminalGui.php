@@ -8,7 +8,6 @@ use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Terminal;
 
 final class TerminalGui
 {
@@ -42,6 +41,9 @@ final class TerminalGui
     /** Double-buffered cell diffing (see DiffSession). */
     private readonly DiffSession $diff;
 
+    /** @var array<string, OutputFormatterStyleInterface> resolved by name */
+    private array $resolvedStyles = [];
+
     private static ?self $instance = null;
 
     /** @param resource $inputStream */
@@ -69,7 +71,7 @@ final class TerminalGui
         $output ??= new ConsoleOutput();
         $cursor ??= new Cursor($output);
         $cursor->hide();
-        $cursor->moveToPosition(0, 0);
+        $output->write(Ansi::moveTo(0, 0), false, OutputInterface::OUTPUT_RAW);
 
         self::setBlockingIfPossible($inputStream, false);
         $sttyMode = self::captureSttyMode($inputStream);
@@ -78,10 +80,25 @@ final class TerminalGui
 
         if ($registerShutdownHandlers) {
             register_shutdown_function(static fn () => $self->cleanUp());
+
+            // Handlers only run when signals are dispatched; without this the
+            // SIGINT clean-up below stays pending instead of restoring the
+            // terminal, and the size cache never learns about a resize.
+            pcntl_async_signals(true);
+
             pcntl_signal(SIGINT, static function () use ($self): void {
                 $self->cleanUp();
                 exit;
             });
+
+            // Keep the size cache honest across resizes — but never at the cost
+            // of a handler the app already installed. on-resize invalidates on
+            // its own, and it may well have run before the first draw brought
+            // this singleton into being.
+            $installed = pcntl_signal_get_handler(SIGWINCH);
+            if ($installed === SIG_DFL || $installed === SIG_IGN) {
+                pcntl_signal(SIGWINCH, static fn () => TerminalSize::invalidate());
+            }
         }
 
         return $self;
@@ -114,6 +131,7 @@ final class TerminalGui
     public function addOutputFormatter(string $name, OutputFormatterStyleInterface $style): self
     {
         $this->output->getFormatter()->setStyle($name, $style);
+        unset($this->resolvedStyles[$name]); // a re-registered name must re-resolve
 
         return $this;
     }
@@ -164,7 +182,7 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition($column, $row);
+        $this->activeOutput()->write(Ansi::moveTo($column, $row), false, OutputInterface::OUTPUT_RAW);
     }
 
     /**
@@ -177,7 +195,7 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition(0, 0);
+        $this->activeOutput()->write(Ansi::moveTo(0, 0), false, OutputInterface::OUTPUT_RAW);
     }
 
     /**
@@ -216,13 +234,40 @@ final class TerminalGui
     public function beginDiff(int $width, int $height): void
     {
         $this->diff->begin($width, $height);
-        $this->diffCoversTerminalWidth = $width >= (new Terminal())->getWidth();
+        $this->diffCoversTerminalWidth = $width >= TerminalSize::width();
     }
 
     /** Closes the diff session and releases both buffers. */
     public function endDiff(): void
     {
         $this->diff->end();
+        $this->diffCoversTerminalWidth = false;
+    }
+
+    /**
+     * The terminal's current dimensions as [width, height], re-measured after
+     * a resize rather than frozen at the size it had on startup.
+     *
+     * @return array{int, int}
+     */
+    public function terminalSize(): array
+    {
+        return TerminalSize::get();
+    }
+
+    /**
+     * The open diff session's dimensions as [width, height], or null when no
+     * session is open. Lets a render loop notice that the terminal has been
+     * resized away from the size its back-buffer was opened at.
+     *
+     * @return array{int, int}|null
+     */
+    public function diffSize(): ?array
+    {
+        $width = $this->diff->width();
+        $height = $this->diff->height();
+
+        return ($width === null || $height === null) ? null : [$width, $height];
     }
 
     /** Resets the back-buffer to blank. No-op when no diff session is open. */
@@ -251,9 +296,8 @@ final class TerminalGui
         // only a row change falls back to an absolute move. (-1 = unknown: the
         // real cursor position at present()-time is not tracked, so the first
         // run is always absolute.)
-        // The escape sequences match Symfony Cursor's moveRight()/
-        // moveToPosition() byte-for-byte; building the payload as one string
-        // avoids a BufferedOutput + Cursor allocation per frame.
+        // Building the payload as one string avoids a BufferedOutput + Cursor
+        // allocation per frame.
         $curColumn = -1;
         $curRow = -1;
         $out = '';
@@ -264,9 +308,9 @@ final class TerminalGui
             $y = $run['y'];
 
             if ($y === $curRow && $x > $curColumn) {
-                $out .= "\x1b[" . ($x - $curColumn) . 'C';
+                $out .= Ansi::moveRight($x - $curColumn);
             } elseif ($y !== $curRow || $x !== $curColumn) {
-                $out .= "\x1b[" . ($y + 1) . ';' . $x . 'H';
+                $out .= Ansi::moveTo($x, $y);
             }
 
             $text = $run['text'];
@@ -353,7 +397,7 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition(0, $line);
+        $this->activeOutput()->write(Ansi::moveTo(0, $line), false, OutputInterface::OUTPUT_RAW);
         $this->activeCursor()->clearLine();
     }
 
@@ -470,24 +514,15 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition($column, $row);
-        $this->write($text, $style);
-    }
-
-    private function write(string $text, ?string $style = ''): void
-    {
-        $this->writeStyled($this->activeOutput(), $text, $style);
-    }
-
-    /**
-     * Writes text to an output with its style already applied, always raw.
-     * Bypassing the formatter's tag parse is faster and keeps literal '<...>'
-     * in user text intact — styled or not — instead of having it swallowed
-     * as a markup tag.
-     */
-    private function writeStyled(OutputInterface $output, string $text, ?string $style): void
-    {
-        $output->write($this->applyStyle($text, $style), false, OutputInterface::OUTPUT_RAW);
+        // Move and text go out as one write: two writes per draw doubles the
+        // syscalls in immediate mode for no gain. Always raw — bypassing the
+        // formatter's tag parse is faster and keeps literal '<...>' in user
+        // text intact, styled or not, instead of having it swallowed as markup.
+        $this->activeOutput()->write(
+            Ansi::moveTo($column, $row) . $this->applyStyle($text, $style),
+            false,
+            OutputInterface::OUTPUT_RAW,
+        );
     }
 
     /**
@@ -501,17 +536,22 @@ final class TerminalGui
             return $text;
         }
 
-        $formatter = $this->output->getFormatter();
-        if (!$formatter->hasStyle($style)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Unknown style "%s". Register it first with add-color or add-output-formatter.',
-                $style,
-            ));
+        // Resolved styles are cached: present() calls this once per run, and
+        // hasStyle()/getStyle() are two hash lookups plus dispatch each time.
+        $resolved = $this->resolvedStyles[$style] ?? null;
+        if ($resolved === null) {
+            $formatter = $this->output->getFormatter();
+            if (!$formatter->hasStyle($style)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Unknown style "%s". Register it first with add-color or add-output-formatter.',
+                    $style,
+                ));
+            }
+
+            $resolved = $this->resolvedStyles[$style] = $formatter->getStyle($style);
         }
 
-        return $this->output->isDecorated()
-            ? $formatter->getStyle($style)->apply($text)
-            : $text;
+        return $this->output->isDecorated() ? $resolved->apply($text) : $text;
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void
@@ -535,7 +575,11 @@ final class TerminalGui
             return;
         }
 
-        $this->cursor->moveToPosition($this->maxWidth, $this->maxHeight);
+        $this->output->write(
+            Ansi::moveTo($this->maxWidth, $this->maxHeight),
+            false,
+            OutputInterface::OUTPUT_RAW,
+        );
     }
 
     private function cleanUp(): void

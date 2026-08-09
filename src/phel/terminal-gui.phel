@@ -2,8 +2,8 @@
   (:require phel.string :refer [join])
   (:use PhelCliGui.TerminalGui)
   (:use PhelCliGui.BorderStyle)
-  (:use Symfony.Component.Console.Formatter.OutputFormatterStyle)
-  (:use Symfony.Component.Console.Terminal))
+  (:use PhelCliGui.TerminalSize)
+  (:use Symfony.Component.Console.Formatter.OutputFormatterStyle))
 
 (defn- get-gui
   "Gets the singleton GUI instance."
@@ -212,12 +212,15 @@
   (parse-keys (read-available)))
 
 (defn terminal-size
-  "Returns the current terminal dimensions as {:width w :height h}."
-  {:example "(terminal-size) ; => {:width 120 :height 40}"}
+  "Returns the current terminal dimensions as {:width w :height h}. Re-measured
+  after a resize rather than frozen at the size the terminal had on startup, and
+  cheap enough to call every frame (the measurement is cached until SIGWINCH)."
+  {:example "(terminal-size) ; => {:width 120 :height 40}"
+   :see-also ["on-resize" "diff-size"]}
   []
-  (let [term (php/new Terminal)]
-    {:width  (.getWidth term)
-     :height (.getHeight term)}))
+  (let [size (TerminalSize/get)]
+    {:width  (php/aget size 0)
+     :height (php/aget size 1)}))
 
 (defn on-resize
   "Registers f to run whenever the terminal is resized (SIGWINCH). f receives
@@ -229,7 +232,12 @@
    :see-also ["terminal-size" "with-diff"]}
   [f]
   (php/pcntl_async_signals true)
-  (php/pcntl_signal php/SIGWINCH (fn [signo siginfo] (f (terminal-size)))))
+  (php/pcntl_signal php/SIGWINCH
+                    (fn [signo siginfo]
+                      # Drop the cached measurement first, or f is handed the
+                      # size the terminal had *before* the resize it signals.
+                      (TerminalSize/invalidate)
+                      (f (terminal-size)))))
 
 (defn max-bounds
   "Returns the maximum (x,y) extent reached by render/draw operations
@@ -323,11 +331,28 @@
   open, every draw verb (render, draw-box, fill-region, ...) paints into a
   back-buffer instead of the terminal; present then writes only the cells that
   changed since the last frame — the minimal repaint a flicker-free TUI wants.
-  Call clear-buffer at the top of each frame to repaint from blank."
+  Call clear-buffer at the top of each frame to repaint from blank.
+  A missing (or omitted) :width/:height defaults to the current terminal size,
+  so (begin-diff) opens a full-screen session."
   {:example "(begin-diff {:width 80 :height 24})"
-   :see-also ["present" "clear-buffer" "end-diff" "with-diff"]}
-  [{:keys [width height]}]
-  (.beginDiff (get-gui) width height))
+   :see-also ["present" "clear-buffer" "end-diff" "with-diff" "diff-size"]}
+  ([] (begin-diff nil))
+  ([{:keys [width height]}]
+   (let [term (when (or (nil? width) (nil? height)) (terminal-size))]
+     (.beginDiff (get-gui)
+                 (or width (:width term))
+                 (or height (:height term))))))
+
+(defn diff-size
+  "Returns the open diff session's dimensions as {:width w :height h}, or nil
+  when no session is open. A back-buffer has a fixed size, so compare this
+  against terminal-size in the render loop (or from on-resize) to notice that
+  the session needs reopening at the new dimensions."
+  {:example "(when (not= (diff-size) (terminal-size)) (end-diff) (begin-diff))"
+   :see-also ["begin-diff" "terminal-size" "on-resize"]}
+  []
+  (when-let [size (.diffSize (get-gui))]
+    {:width (php/aget size 0) :height (php/aget size 1)}))
 
 (defn end-diff
   "Closes the diff session and releases both buffers."
@@ -354,9 +379,10 @@
 (defmacro with-diff
   "Runs body inside a diff session of the given {:width w :height h}, closing it
   on completion (even if body throws). Inside, draw with the normal verbs and
-  call present to flush each frame's minimal repaint."
+  call present to flush each frame's minimal repaint. Pass nil (or a map with
+  either dimension missing) to size the session to the terminal."
   {:example "(with-diff {:width 80 :height 24} (loop [] (clear-buffer) (render 0 0 \"hi\") (present) (recur)))"
-   :see-also ["begin-diff" "end-diff" "present"]}
+   :see-also ["begin-diff" "end-diff" "present" "diff-size"]}
   [dims & body]
   `(do
      (begin-diff ~dims)

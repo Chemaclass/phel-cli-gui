@@ -7,6 +7,7 @@ namespace PhelCliGui\Tests;
 use InvalidArgumentException;
 use PhelCliGui\BorderStyle;
 use PhelCliGui\TerminalGui;
+use PhelCliGui\TerminalSize;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Cursor;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -42,6 +43,7 @@ final class TerminalGuiTest extends TestCase
 
     protected function tearDown(): void
     {
+        TerminalSize::override(null, null);
         TerminalGui::resetInstance();
         if (is_resource($this->inputStream)) {
             fclose($this->inputStream);
@@ -91,9 +93,51 @@ final class TerminalGuiTest extends TestCase
 
         $content = $this->output->fetch();
 
-        // Symfony Cursor::moveToPosition(col, row) emits "\e[{row+1};{col}H".
-        self::assertStringContainsString("\033[3;3H", $content);
+        // CUP is 1-indexed on both axes: (3, 2) => "\e[3;4H".
+        self::assertStringContainsString("\033[3;4H", $content);
         self::assertStringContainsString('hello', $content);
+    }
+
+    public function test_adjacent_columns_get_distinct_absolute_moves(): void
+    {
+        // Regression: CUP counts columns from 1, so column 0 and column 1 must
+        // not produce the same sequence. Symfony's Cursor::moveToPosition()
+        // passes the column through unincremented, which collapsed them onto
+        // the same cell and shifted every column >= 1 one place left.
+        $this->gui->render(0, 0, 'A');
+        $this->gui->render(1, 0, 'B');
+
+        $content = $this->output->fetch();
+        self::assertStringContainsString("\033[1;1HA", $content);
+        self::assertStringContainsString("\033[1;2HB", $content);
+    }
+
+    public function test_draw_emits_move_and_text_in_a_single_write(): void
+    {
+        TerminalGui::resetInstance();
+
+        $counter = new class(OutputInterface::VERBOSITY_NORMAL, true) extends BufferedOutput {
+            public int $writes = 0;
+
+            protected function doWrite(string $message, bool $newline): void
+            {
+                ++$this->writes;
+                parent::doWrite($message, $newline);
+            }
+        };
+
+        $gui = TerminalGui::withStream(
+            inputStream: $this->inputStream,
+            output: $counter,
+            cursor: new Cursor($counter),
+            registerShutdownHandlers: false,
+        );
+        $counter->writes = 0; // ignore init (cursor hide + move-to-origin)
+
+        $gui->render(2, 1, 'hi');
+
+        // One write for the move + text, one for the trailing cursor park.
+        self::assertSame(2, $counter->writes);
     }
 
     public function test_render_tracks_max_bounds_using_display_width(): void
@@ -199,7 +243,7 @@ final class TerminalGuiTest extends TestCase
         $this->gui->clearLine(3);
 
         $content = $this->output->fetch();
-        self::assertStringContainsString("\033[4;0H", $content);
+        self::assertStringContainsString("\033[4;1H", $content);
         self::assertStringContainsString("\033[2K", $content);
     }
 
@@ -414,7 +458,7 @@ final class TerminalGuiTest extends TestCase
         }
         $gui->endFrame();
 
-        // 10 immediate renders would be 30+ writes; buffered collapses to one.
+        // 10 immediate renders would be 20 writes; buffered collapses to one.
         self::assertSame(1, $counter->writes);
     }
 
@@ -430,12 +474,12 @@ final class TerminalGuiTest extends TestCase
 
         $content = $this->output->fetch();
 
-        // The intermediate park after the first draw — moveToPosition(1, 0) =>
-        // "\e[1;1H" — must not appear; it is coalesced away.
-        self::assertSame(0, substr_count($content, "\033[1;1H"));
+        // The intermediate park after the first draw — max-bounds (1, 0) =>
+        // "\e[1;2H" — must not appear; it is coalesced away.
+        self::assertSame(0, substr_count($content, "\033[1;2H"));
 
-        // Exactly one trailing park to the final max-bounds (1, 5) => "\e[6;1H".
-        self::assertSame(1, substr_count($content, "\033[6;1H"));
+        // Exactly one trailing park to the final max-bounds (1, 5) => "\e[6;2H".
+        self::assertSame(1, substr_count($content, "\033[6;2H"));
     }
 
     public function test_named_style_renders_inside_frame(): void
@@ -507,8 +551,8 @@ final class TerminalGuiTest extends TestCase
         $this->gui->present();
         $content = $this->output->fetch();
 
-        // moveToPosition(3, 2) => "\e[3;3H" then the run text.
-        self::assertStringContainsString("\033[3;3Hhello", $content);
+        // (3, 2) => "\e[3;4H" then the run text.
+        self::assertStringContainsString("\033[3;4Hhello", $content);
         $this->gui->endDiff();
     }
 
@@ -551,7 +595,7 @@ final class TerminalGuiTest extends TestCase
         $this->gui->present();
         $content = $this->output->fetch();
 
-        self::assertStringContainsString("\033[1;2HX", $content);
+        self::assertStringContainsString("\033[1;3HX", $content);
         self::assertStringNotContainsString('hello', $content);
         $this->gui->endDiff();
     }
@@ -570,7 +614,7 @@ final class TerminalGuiTest extends TestCase
         $this->gui->present();
         $content = $this->output->fetch();
 
-        self::assertStringContainsString("\033[1;0H", $content); // repaint at origin
+        self::assertStringContainsString("\033[1;1H", $content); // repaint at origin
         self::assertStringContainsString('   ', $content);       // blanked cells
         $this->gui->endDiff();
     }
@@ -626,13 +670,13 @@ final class TerminalGuiTest extends TestCase
         $content = $this->output->fetch();
 
         self::assertSame(2, substr_count($content, 'H'));
-        self::assertStringContainsString("\033[2;0H", $content); // second run absolute at row 1
+        self::assertStringContainsString("\033[2;1H", $content); // second run absolute at row 1
         $this->gui->endDiff();
     }
 
     public function test_trailing_blank_run_collapses_to_erase_to_eol(): void
     {
-        putenv('COLUMNS=10'); // session width == terminal width -> EL is safe
+        TerminalSize::override(10, 24); // session width == terminal width -> EL is safe
 
         try {
             $this->gui->beginDiff(10, 1);
@@ -648,14 +692,14 @@ final class TerminalGuiTest extends TestCase
             self::assertStringContainsString("\x1b[K", $content);
             self::assertStringNotContainsString('  ', $content); // no space run written
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }
 
     public function test_narrow_session_writes_spaces_instead_of_erase_to_eol(): void
     {
-        putenv('COLUMNS=80'); // session (10) narrower than the terminal (80)
+        TerminalSize::override(80, 24); // session (10) narrower than the terminal (80)
 
         try {
             $this->gui->beginDiff(10, 1);
@@ -672,14 +716,14 @@ final class TerminalGuiTest extends TestCase
             self::assertStringNotContainsString("\x1b[K", $content);
             self::assertStringContainsString('         ', $content); // 9 spaces
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }
 
     public function test_styled_trailing_blanks_are_written_not_erased(): void
     {
-        putenv('COLUMNS=10');
+        TerminalSize::override(10, 24);
 
         try {
             $this->gui->addAnsiStyle('inverse', '7');
@@ -698,7 +742,7 @@ final class TerminalGuiTest extends TestCase
             // painted so the style's background shows.
             self::assertStringContainsString("\x1b[7m     \x1b[0m", $content);
         } finally {
-            putenv('COLUMNS');
+            TerminalSize::override(null, null);
             $this->gui->endDiff();
         }
     }
@@ -734,7 +778,7 @@ final class TerminalGuiTest extends TestCase
         $this->gui->present();
         $content = $this->output->fetch();
 
-        self::assertStringContainsString("\033[2;0H", $content); // repaint row 1
+        self::assertStringContainsString("\033[2;1H", $content); // repaint row 1
         self::assertStringNotContainsString('aaa', $content);    // row 0 untouched
         $this->gui->endDiff();
     }
@@ -752,6 +796,72 @@ final class TerminalGuiTest extends TestCase
         $this->gui->endDiff();
     }
 
+    public function test_init_keeps_a_resize_handler_the_app_installed_first(): void
+    {
+        // The GUI installs its own SIGWINCH handler to keep the size cache
+        // honest, but on-resize may have registered one before the first draw
+        // brought the singleton into being — clobbering it would silently stop
+        // the app's resize callback from ever firing.
+        $previousWinch = pcntl_signal_get_handler(SIGWINCH);
+        $previousInt = pcntl_signal_get_handler(SIGINT);
+        $appHandler = static function (): void {};
+        pcntl_signal(SIGWINCH, $appHandler);
+
+        try {
+            TerminalGui::resetInstance();
+            $output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, true);
+            TerminalGui::withStream(
+                inputStream: $this->inputStream,
+                output: $output,
+                cursor: new Cursor($output),
+                registerShutdownHandlers: true,
+            );
+
+            self::assertSame($appHandler, pcntl_signal_get_handler(SIGWINCH));
+        } finally {
+            pcntl_signal(SIGWINCH, $previousWinch);
+            pcntl_signal(SIGINT, $previousInt);
+        }
+    }
+
+    public function test_diff_size_reports_the_open_session_dimensions(): void
+    {
+        self::assertNull($this->gui->diffSize());
+
+        $this->gui->beginDiff(30, 12);
+        self::assertSame([30, 12], $this->gui->diffSize());
+
+        $this->gui->endDiff();
+        self::assertNull($this->gui->diffSize());
+    }
+
+    public function test_reopening_a_narrower_session_stops_erasing_to_eol(): void
+    {
+        TerminalSize::override(10, 24);
+
+        try {
+            // A full-width session may collapse trailing blanks to \e[K. After
+            // endDiff that permission must not leak into the next session,
+            // which is narrower than the terminal.
+            $this->gui->beginDiff(10, 1);
+            $this->gui->endDiff();
+
+            $this->gui->beginDiff(4, 1);
+            $this->gui->render(0, 0, 'aaaa');
+            $this->gui->present();
+            $this->output->fetch();
+
+            $this->gui->clearBuffer();
+            $this->gui->render(0, 0, 'a');
+            $this->gui->present();
+
+            self::assertStringNotContainsString("\x1b[K", $this->output->fetch());
+        } finally {
+            TerminalSize::override(null, null);
+            $this->gui->endDiff();
+        }
+    }
+
     public function test_present_without_diff_session_is_noop(): void
     {
         $this->gui->present();
@@ -763,14 +873,14 @@ final class TerminalGuiTest extends TestCase
     {
         $this->gui->moveCursor(3, 2);
 
-        // Symfony Cursor::moveToPosition(col, row) emits "\e[{row+1};{col}H".
-        self::assertStringContainsString("\033[3;3H", $this->output->fetch());
+        // CUP is 1-indexed on both axes: (3, 2) => "\e[3;4H".
+        self::assertStringContainsString("\033[3;4H", $this->output->fetch());
     }
 
     public function test_cursor_home_moves_to_origin(): void
     {
         $this->gui->cursorHome();
 
-        self::assertStringContainsString("\033[1;0H", $this->output->fetch());
+        self::assertStringContainsString("\033[1;1H", $this->output->fetch());
     }
 }

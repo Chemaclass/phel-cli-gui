@@ -85,7 +85,7 @@ final class FrameSession
 
         if ($this->pendingFinalize) {
             $this->pendingFinalize = false;
-            $this->cursor?->moveToPosition($maxColumn, $maxRow);
+            $this->buffer?->write(Ansi::moveTo($maxColumn, $maxRow), false, OutputInterface::OUTPUT_RAW);
         }
 
         $payload = $this->buffer?->fetch() ?? '';
