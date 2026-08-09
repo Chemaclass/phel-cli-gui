@@ -49,6 +49,12 @@ final class ScreenBuffer
     /** @var array<int, array<int, string>> multibyte glyphs, keyed [row][column] */
     private array $wide = [];
 
+    /** A full row of blank glyphs, reused by clear()/clearRow(). */
+    private readonly string $blankChars;
+
+    /** A full row of unstyled ids, reused by clear()/clearRow(). */
+    private readonly string $blankStyles;
+
     /**
      * Style ids are interned process-wide so the same byte always means the
      * same style name in any buffer — diffs between buffers stay a plain
@@ -69,6 +75,9 @@ final class ScreenBuffer
             throw new InvalidArgumentException('Screen buffer dimensions must be at least 1.');
         }
 
+        $this->blankChars = str_repeat(' ', $width);
+        $this->blankStyles = str_repeat(self::UNSTYLED, $width);
+
         $this->clear();
     }
 
@@ -85,8 +94,8 @@ final class ScreenBuffer
     /** Resets every cell back to a blank, unstyled space. */
     public function clear(): void
     {
-        $this->rowChars = array_fill(0, $this->height, str_repeat(' ', $this->width));
-        $this->rowStyles = array_fill(0, $this->height, str_repeat(self::UNSTYLED, $this->width));
+        $this->rowChars = array_fill(0, $this->height, $this->blankChars);
+        $this->rowStyles = array_fill(0, $this->height, $this->blankStyles);
         $this->wide = [];
     }
 
@@ -97,8 +106,8 @@ final class ScreenBuffer
             return;
         }
 
-        $this->rowChars[$row] = str_repeat(' ', $this->width);
-        $this->rowStyles[$row] = str_repeat(self::UNSTYLED, $this->width);
+        $this->rowChars[$row] = $this->blankChars;
+        $this->rowStyles[$row] = $this->blankStyles;
         unset($this->wide[$row]);
     }
 
@@ -117,7 +126,7 @@ final class ScreenBuffer
 
         // Printable-ASCII fast path: bytes are glyphs, so the clipped slice
         // splices into the packed row in two C-level string operations.
-        if (strspn($text, Text::ASCII_PRINTABLE) === strlen($text)) {
+        if (Text::isPrintableAscii($text)) {
             $first = $column < 0 ? -$column : 0;
             $last = min(strlen($text), $this->width - $column);
             if ($first >= $last) {
@@ -181,14 +190,14 @@ final class ScreenBuffer
         $sameSize = $previous->width === $this->width && $previous->height === $this->height;
         $runs = [];
 
+        // On a size mismatch every cell counts as changed, which the loop below
+        // expresses as an all-ones mask — one allocation for the whole diff.
+        $allChanged = $sameSize ? '' : str_repeat("\xff", $this->width);
+
         for ($y = 0; $y < $this->height; $y++) {
             $chars = $this->rowChars[$y];
             $styles = $this->rowStyles[$y];
             $wide = $this->wide[$y] ?? [];
-
-            $prevChars = '';
-            $prevStyles = '';
-            $prevWide = [];
 
             if ($sameSize) {
                 $prevChars = $previous->rowChars[$y];
@@ -199,32 +208,33 @@ final class ScreenBuffer
                     continue;
                 }
 
-                // Byte mask of cells whose glyph byte or style id differs;
-                // strspn over the leading/trailing NULs finds the changed
-                // span at C speed.
+                // Byte mask of the row: NUL where the cell is unchanged,
+                // non-NUL where its glyph byte or style id differs. Two
+                // *different* multibyte glyphs share the sentinel byte, so the
+                // XOR misses them — those cells are marked by hand, after which
+                // the mask is exact and every scan below is a C-level
+                // strspn/strcspn rather than a per-cell PHP loop. (A cell whose
+                // wide glyph was dropped differs in its glyph byte, so the XOR
+                // already caught it.)
                 $mask = ($chars ^ $prevChars) | ($styles ^ $prevStyles);
-                $first = strspn($mask, "\0");
-                $last = $first === $this->width ? -1 : $this->width - 1 - strspn(strrev($mask), "\0");
-
-                // Two different multibyte glyphs share the sentinel byte, so
-                // the mask misses them — widen the span over the side tables.
                 if ($wide !== $prevWide) {
                     foreach ($wide as $x => $glyph) {
                         if (($prevWide[$x] ?? null) !== $glyph) {
-                            $first = min($first, $x);
-                            $last = max($last, $x);
-                        }
-                    }
-                    foreach ($prevWide as $x => $glyph) {
-                        if (!isset($wide[$x])) {
-                            $first = min($first, $x);
-                            $last = max($last, $x);
+                            $mask[$x] = "\xff";
                         }
                     }
                 }
+
+                $first = strspn($mask, "\0");
+                if ($first === $this->width) {
+                    continue; // only the side tables' key order differed
+                }
+
+                $scanEnd = strlen(rtrim($mask, "\0"));
             } else {
+                $mask = $allChanged;
                 $first = 0;
-                $last = $this->width - 1;
+                $scanEnd = $this->width;
             }
 
             $x = $first;
@@ -233,70 +243,45 @@ final class ScreenBuffer
             $rowEnd = $first;
             $runCells = 0;
 
-            while ($x <= $last) {
-                if ($sameSize
-                    && $chars[$x] === $prevChars[$x]
-                    && $styles[$x] === $prevStyles[$x]
-                    && ($chars[$x] !== self::WIDE || ($wide[$x] ?? null) === ($prevWide[$x] ?? null))
-                ) {
-                    $x++;
-                    continue;
+            while ($x < $scanEnd) {
+                $x += strspn($mask, "\0", $x, $scanEnd - $x);
+                if ($x >= $scanEnd) {
+                    break;
                 }
 
+                // A run never crosses a style boundary, so the same-style span
+                // starting here caps how far it can reach.
                 $styleByte = $styles[$x];
+                $styleEnd = $x + strspn($styles, $styleByte, $x, $scanEnd - $x);
                 $startX = $x;
-                $text = '';
 
-                while ($x <= $last) {
-                    if ($styles[$x] !== $styleByte) {
+                while (true) {
+                    $x += strcspn($mask, "\0", $x, $styleEnd - $x);
+                    $end = $x;
+                    if ($x >= $styleEnd) {
                         break;
                     }
-                    if ($sameSize
-                        && $chars[$x] === $prevChars[$x]
-                        && $styles[$x] === $prevStyles[$x]
-                        && ($chars[$x] !== self::WIDE || ($wide[$x] ?? null) === ($prevWide[$x] ?? null))
-                    ) {
-                        // Unchanged cell: absorb it (and up to GAP_MERGE - 1
-                        // more) when another changed cell of this style follows
-                        // close by — rewriting a short identical gap beats the
-                        // cursor escape a separate run would cost.
-                        $next = $x + 1;
-                        $limit = min($last, $x + self::GAP_MERGE);
-                        while ($next <= $limit
-                            && $styles[$next] === $styleByte
-                            && $styles[$next] === $prevStyles[$next]
-                            && $chars[$next] === $prevChars[$next]
-                            && ($chars[$next] !== self::WIDE || ($wide[$next] ?? null) === ($prevWide[$next] ?? null))
-                        ) {
-                            $next++;
-                        }
 
-                        if ($next > $limit || $styles[$next] !== $styleByte) {
-                            break; // no same-style change within reach
-                        }
-
-                        for (; $x < $next; $x++) {
-                            $glyph = $chars[$x];
-                            $text .= $glyph === self::WIDE ? $wide[$x] : $glyph;
-                        }
-                        continue;
+                    // Unchanged cells ahead: absorb up to GAP_MERGE of them when
+                    // another same-style change follows: rewriting a short
+                    // identical gap beats the cursor escape a split would cost.
+                    $gap = strspn($mask, "\0", $x, $styleEnd - $x);
+                    if ($gap > self::GAP_MERGE || $x + $gap >= $styleEnd) {
+                        break;
                     }
-
-                    $glyph = $chars[$x];
-                    $text .= $glyph === self::WIDE ? $wide[$x] : $glyph;
-                    $x++;
+                    $x += $gap;
                 }
 
                 if ($rowStart === -1) {
                     $rowStart = $startX;
                 }
-                $rowEnd = $x;
-                $runCells += $x - $startX;
+                $rowEnd = $end;
+                $runCells += $end - $startX;
 
                 $rowRuns[] = [
                     'x' => $startX,
                     'y' => $y,
-                    'text' => $text,
+                    'text' => self::spanText($chars, $wide, $startX, $end - $startX),
                     'style' => self::$styleNames[ord($styleByte)],
                 ];
             }
@@ -311,6 +296,36 @@ final class ScreenBuffer
         }
 
         return $runs;
+    }
+
+    /**
+     * Renders cells [from, from + length) of a packed row as text, expanding
+     * sentinel bytes back into their multibyte glyphs. Rows without wide
+     * glyphs — the common case — are one substr().
+     *
+     * @param array<int, string> $wide
+     */
+    private static function spanText(string $chars, array $wide, int $from, int $length): string
+    {
+        $text = substr($chars, $from, $length);
+        if ($wide === []) {
+            return $text;
+        }
+
+        $at = strpos($text, self::WIDE);
+        if ($at === false) {
+            return $text;
+        }
+
+        $out = '';
+        $cut = 0;
+        do {
+            $out .= substr($text, $cut, $at - $cut) . $wide[$from + $at];
+            $cut = $at + 1;
+            $at = strpos($text, self::WIDE, $cut);
+        } while ($at !== false);
+
+        return $out . substr($text, $cut);
     }
 
     /**
@@ -330,34 +345,26 @@ final class ScreenBuffer
         $styles = $this->rowStyles[$y];
         $wide = $this->wide[$y] ?? [];
 
-        $segments = [];
-        $segStart = $start;
-        $styleByte = $styles[$start];
-        $text = '';
-
-        for ($x = $start; $x < $end; $x++) {
-            if ($styles[$x] !== $styleByte) {
-                $segments[] = [
-                    'x' => $segStart,
-                    'y' => $y,
-                    'text' => $text,
-                    'style' => self::$styleNames[ord($styleByte)],
-                ];
-                $segStart = $x;
-                $styleByte = $styles[$x];
-                $text = '';
-            }
-
-            $glyph = $chars[$x];
-            $text .= $glyph === self::WIDE ? $wide[$x] : $glyph;
+        if ($start >= $end) {
+            return $rowRuns;
         }
 
-        $segments[] = [
-            'x' => $segStart,
-            'y' => $y,
-            'text' => $text,
-            'style' => self::$styleNames[ord($styleByte)],
-        ];
+        $segments = [];
+        $x = $start;
+
+        do {
+            $styleByte = $styles[$x];
+            $length = strspn($styles, $styleByte, $x, $end - $x);
+
+            $segments[] = [
+                'x' => $x,
+                'y' => $y,
+                'text' => self::spanText($chars, $wide, $x, $length),
+                'style' => self::$styleNames[ord($styleByte)],
+            ];
+
+            $x += $length;
+        } while ($x < $end);
 
         $extraCells = ($end - $start) - $runCells;
         $movesSaved = count($rowRuns) - count($segments);

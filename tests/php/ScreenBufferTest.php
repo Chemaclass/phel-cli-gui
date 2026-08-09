@@ -392,6 +392,66 @@ final class ScreenBufferTest extends TestCase
         );
     }
 
+    /**
+     * The contract present() relies on: replaying a diff's runs onto the
+     * previous frame must reproduce the next frame exactly — no missed change,
+     * and no absorbed gap or row rewrite that alters a cell. Randomised over
+     * ASCII, multibyte glyphs, styles and clears, seeded so a failure is
+     * reproducible.
+     */
+    public function test_replaying_runs_reproduces_the_next_frame(): void
+    {
+        $glyphs = ['a', 'b', ' ', '─', '║', '#'];
+        $styles = [null, 'red', 'blue'];
+
+        for ($seed = 0; $seed < 200; $seed++) {
+            mt_srand($seed);
+            $width = mt_rand(1, 24);
+            $height = mt_rand(1, 4);
+
+            $previous = new ScreenBuffer($width, $height);
+            $next = new ScreenBuffer($width, $height);
+
+            foreach ([$previous, $next] as $buffer) {
+                for ($paint = 0, $paints = mt_rand(0, 12); $paint < $paints; $paint++) {
+                    if (mt_rand(0, 9) === 0) {
+                        $buffer->clearRow(mt_rand(0, $height - 1));
+                        continue;
+                    }
+
+                    $text = '';
+                    for ($i = 0, $len = mt_rand(1, 6); $i < $len; $i++) {
+                        $text .= $glyphs[mt_rand(0, count($glyphs) - 1)];
+                    }
+
+                    $buffer->paint(
+                        mt_rand(-2, $width),
+                        mt_rand(0, $height - 1),
+                        $text,
+                        $styles[mt_rand(0, count($styles) - 1)],
+                    );
+                }
+            }
+
+            $replayed = $previous->snapshot();
+            foreach ($next->diff($previous) as $run) {
+                $replayed->paint($run['x'], $run['y'], $run['text'], $run['style']);
+            }
+
+            // Compare content against a blank baseline rather than diffing the
+            // two buffers against each other: a blank row holds no sentinel
+            // bytes, so every non-space cell shows up in the runs regardless of
+            // how diff() handles multibyte cells. Diffing them directly would
+            // let a bug in that path hide itself.
+            $blank = new ScreenBuffer($width, $height);
+            self::assertSame(
+                $next->diff($blank),
+                $replayed->diff($blank),
+                "seed {$seed}: replaying the runs does not reproduce the next frame",
+            );
+        }
+    }
+
     public function test_size_mismatch_repaints_every_changed_cell(): void
     {
         $buffer = new ScreenBuffer(2, 1);
