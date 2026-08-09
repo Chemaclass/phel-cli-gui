@@ -77,8 +77,8 @@ final class FrameSessionTest extends TestCase
         $frame->begin($this->base());
         $frame->requestFinalize();
 
-        // moveToPosition(3, 2) => "\e[3;3H".
-        self::assertSame("\033[3;3H", $frame->end(3, 2));
+        // CUP is 1-indexed on both axes: (3, 2) => "\e[3;4H".
+        self::assertSame("\033[3;4H", $frame->end(3, 2));
     }
 
     public function test_end_without_begin_is_noop(): void

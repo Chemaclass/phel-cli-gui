@@ -42,6 +42,9 @@ final class TerminalGui
     /** Double-buffered cell diffing (see DiffSession). */
     private readonly DiffSession $diff;
 
+    /** @var array<string, OutputFormatterStyleInterface> resolved by name */
+    private array $resolvedStyles = [];
+
     private static ?self $instance = null;
 
     /** @param resource $inputStream */
@@ -69,7 +72,7 @@ final class TerminalGui
         $output ??= new ConsoleOutput();
         $cursor ??= new Cursor($output);
         $cursor->hide();
-        $cursor->moveToPosition(0, 0);
+        $output->write(Ansi::moveTo(0, 0), false, OutputInterface::OUTPUT_RAW);
 
         self::setBlockingIfPossible($inputStream, false);
         $sttyMode = self::captureSttyMode($inputStream);
@@ -114,6 +117,7 @@ final class TerminalGui
     public function addOutputFormatter(string $name, OutputFormatterStyleInterface $style): self
     {
         $this->output->getFormatter()->setStyle($name, $style);
+        unset($this->resolvedStyles[$name]); // a re-registered name must re-resolve
 
         return $this;
     }
@@ -164,7 +168,7 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition($column, $row);
+        $this->activeOutput()->write(Ansi::moveTo($column, $row), false, OutputInterface::OUTPUT_RAW);
     }
 
     /**
@@ -177,7 +181,7 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition(0, 0);
+        $this->activeOutput()->write(Ansi::moveTo(0, 0), false, OutputInterface::OUTPUT_RAW);
     }
 
     /**
@@ -251,9 +255,8 @@ final class TerminalGui
         // only a row change falls back to an absolute move. (-1 = unknown: the
         // real cursor position at present()-time is not tracked, so the first
         // run is always absolute.)
-        // The escape sequences match Symfony Cursor's moveRight()/
-        // moveToPosition() byte-for-byte; building the payload as one string
-        // avoids a BufferedOutput + Cursor allocation per frame.
+        // Building the payload as one string avoids a BufferedOutput + Cursor
+        // allocation per frame.
         $curColumn = -1;
         $curRow = -1;
         $out = '';
@@ -264,9 +267,9 @@ final class TerminalGui
             $y = $run['y'];
 
             if ($y === $curRow && $x > $curColumn) {
-                $out .= "\x1b[" . ($x - $curColumn) . 'C';
+                $out .= Ansi::moveRight($x - $curColumn);
             } elseif ($y !== $curRow || $x !== $curColumn) {
-                $out .= "\x1b[" . ($y + 1) . ';' . $x . 'H';
+                $out .= Ansi::moveTo($x, $y);
             }
 
             $text = $run['text'];
@@ -353,7 +356,7 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition(0, $line);
+        $this->activeOutput()->write(Ansi::moveTo(0, $line), false, OutputInterface::OUTPUT_RAW);
         $this->activeCursor()->clearLine();
     }
 
@@ -470,24 +473,15 @@ final class TerminalGui
             return;
         }
 
-        $this->activeCursor()->moveToPosition($column, $row);
-        $this->write($text, $style);
-    }
-
-    private function write(string $text, ?string $style = ''): void
-    {
-        $this->writeStyled($this->activeOutput(), $text, $style);
-    }
-
-    /**
-     * Writes text to an output with its style already applied, always raw.
-     * Bypassing the formatter's tag parse is faster and keeps literal '<...>'
-     * in user text intact — styled or not — instead of having it swallowed
-     * as a markup tag.
-     */
-    private function writeStyled(OutputInterface $output, string $text, ?string $style): void
-    {
-        $output->write($this->applyStyle($text, $style), false, OutputInterface::OUTPUT_RAW);
+        // Move and text go out as one write: two writes per draw doubles the
+        // syscalls in immediate mode for no gain. Always raw — bypassing the
+        // formatter's tag parse is faster and keeps literal '<...>' in user
+        // text intact, styled or not, instead of having it swallowed as markup.
+        $this->activeOutput()->write(
+            Ansi::moveTo($column, $row) . $this->applyStyle($text, $style),
+            false,
+            OutputInterface::OUTPUT_RAW,
+        );
     }
 
     /**
@@ -501,17 +495,22 @@ final class TerminalGui
             return $text;
         }
 
-        $formatter = $this->output->getFormatter();
-        if (!$formatter->hasStyle($style)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Unknown style "%s". Register it first with add-color or add-output-formatter.',
-                $style,
-            ));
+        // Resolved styles are cached: present() calls this once per run, and
+        // hasStyle()/getStyle() are two hash lookups plus dispatch each time.
+        $resolved = $this->resolvedStyles[$style] ?? null;
+        if ($resolved === null) {
+            $formatter = $this->output->getFormatter();
+            if (!$formatter->hasStyle($style)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Unknown style "%s". Register it first with add-color or add-output-formatter.',
+                    $style,
+                ));
+            }
+
+            $resolved = $this->resolvedStyles[$style] = $formatter->getStyle($style);
         }
 
-        return $this->output->isDecorated()
-            ? $formatter->getStyle($style)->apply($text)
-            : $text;
+        return $this->output->isDecorated() ? $resolved->apply($text) : $text;
     }
 
     private function updateBoundsForArea(int $column, int $row, int $width, int $height): void
@@ -535,7 +534,11 @@ final class TerminalGui
             return;
         }
 
-        $this->cursor->moveToPosition($this->maxWidth, $this->maxHeight);
+        $this->output->write(
+            Ansi::moveTo($this->maxWidth, $this->maxHeight),
+            false,
+            OutputInterface::OUTPUT_RAW,
+        );
     }
 
     private function cleanUp(): void
