@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-08-09
+
 ### Fixed
 - `terminal-size` reports the terminal's current dimensions instead of the ones it had at startup, so `on-resize` hands its callback the size the terminal was just resized *to*. Symfony's `Terminal` memoises its probe for the life of the process and lets `COLUMNS`/`LINES` outrank it — and shells export those, updating them on resize for themselves only, so a child process inherits a snapshot frozen at launch. The size is now measured directly, cached, and refreshed on `SIGWINCH`; `TerminalSize::override()` sets it explicitly when a caller already knows it.
 - Renders land on the column they were given. `Cursor::moveToPosition()` writes the column into the CUP escape unincremented while CUP counts columns from 1, so every draw appeared one cell to the left of its coordinate and columns 0 and 1 collapsed onto the same cell. Immediate mode, frame batching and `present` all shared that construction and are all corrected. A UI that was nudged right by one column to compensate should drop the nudge.
@@ -197,7 +199,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release. Support PHP `^8.0` and Phel `^0.10`.
 
-[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.14.0...HEAD
+[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.15.0...HEAD
+[0.15.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.11.0...0.12.0
