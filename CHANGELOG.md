@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-25
+
 ### Changed
 - Requires Phel `^0.53` and PHP `>=8.5`, the floor Phel 0.53 sets. Source drops the syntax and aliases Phel 0.53 removed (`php/new`, `#` comments, `push`) and the deprecated `to-php-array`.
 
@@ -202,7 +204,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release. Support PHP `^8.0` and Phel `^0.10`.
 
-[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.15.0...HEAD
+[Unreleased]: https://github.com/Chemaclass/phel-cli-gui/compare/0.16.0...HEAD
+[0.16.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/Chemaclass/phel-cli-gui/compare/0.12.0...0.13.0
