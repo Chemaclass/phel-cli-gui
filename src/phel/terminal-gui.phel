@@ -81,10 +81,10 @@
     :or {options []}}]
   (.addOutputFormatter (get-gui)
                        style-name
-                       (php/new OutputFormatterStyle
-                                foreground
-                                background
-                                (to-php-array options))))
+                       (new OutputFormatterStyle
+                            foreground
+                            background
+                            (to-array options))))
 
 (def- sgr-option-codes
   {"bold"          "1"
@@ -187,20 +187,20 @@
            acc []]
       (if (>= i len)
         acc
-        # Longest escape sequence first: 4-byte (PgUp/PgDn/Ins/Del), then
-        # 3-byte (arrows/Home/End/F1-F4), then single control bytes.
+        ;; Longest escape sequence first: 4-byte (PgUp/PgDn/Ins/Del), then
+        ;; 3-byte (arrows/Home/End/F1-F4), then single control bytes.
         (let [eight (php/substr hex i 8)
               six   (php/substr hex i 6)]
           (cond
-            (get key-map eight) (recur (+ i 8) (push acc (get key-map eight)))
-            (get key-map six)   (recur (+ i 6) (push acc (get key-map six)))
+            (get key-map eight) (recur (+ i 8) (conj acc (get key-map eight)))
+            (get key-map six)   (recur (+ i 6) (conj acc (get key-map six)))
             :else
             (let [two   (php/substr hex i 2)
                   known (get key-map two)]
               (if known
-                (recur (+ i 2) (push acc known))
+                (recur (+ i 2) (conj acc known))
                 (let [n (utf8-hex-len (php/hexdec two))]
-                  (recur (+ i n) (push acc {:char (php/hex2bin (php/substr hex i n))})))))))))))
+                  (recur (+ i n) (conj acc {:char (php/hex2bin (php/substr hex i n))})))))))))))
 
 (defn read-keys
   "Drains all pending input and returns the vector of key events it contained
@@ -234,8 +234,8 @@
   (php/pcntl_async_signals true)
   (php/pcntl_signal php/SIGWINCH
                     (fn [signo siginfo]
-                      # Drop the cached measurement first, or f is handed the
-                      # size the terminal had *before* the resize it signals.
+                      ;; Drop the cached measurement first, or f is handed the
+                      ;; size the terminal had *before* the resize it signals.
                       (TerminalSize/invalidate)
                       (f (terminal-size)))))
 

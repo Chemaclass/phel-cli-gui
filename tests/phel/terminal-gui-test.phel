@@ -108,7 +108,7 @@
     (is (= "╭" (.topLeft (make-border-style style))))))
 
 (deftest on-resize-fires-handler-with-current-dimensions
-  (let [captured (php/new \ArrayObject)]
+  (let [captured (new \ArrayObject)]
     (on-resize (fn [dims] (php/aset captured "dims" dims)))
     (php/posix_kill (php/posix_getpid) php/SIGWINCH)
     (php/pcntl_signal_dispatch)
