@@ -22,9 +22,9 @@ exposed behind a small, data-first Phel API.
 
 ## Requirements
 
-- PHP 8.4+
+- PHP 8.5+
 - `ext-pcntl`, `ext-posix`, `ext-readline`
-- Phel `^0.49`
+- Phel `^0.53`
 
 ## Install
 

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Requires Phel `^0.53` and PHP `>=8.5`, the floor Phel 0.53 sets. Source drops the syntax and aliases Phel 0.53 removed (`php/new`, `#` comments, `push`) and the deprecated `to-php-array`.
+
 ## [0.15.0] - 2026-08-09
 
 ### Fixed
