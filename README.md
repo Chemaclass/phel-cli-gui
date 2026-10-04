@@ -24,7 +24,7 @@ exposed behind a small, data-first Phel API.
 
 - PHP 8.5+
 - `ext-pcntl`, `ext-posix`, `ext-readline`
-- Phel `^0.53`
+- Phel `^0.54`
 
 ## Install
 
