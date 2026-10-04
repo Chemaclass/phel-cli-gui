@@ -16,11 +16,11 @@ alwaysApply: true
 
 ## Toolchain
 
-- PHP `>=8.5`, `phel-lang/phel-lang` `^0.53` only.
+- PHP `>=8.5`, `phel-lang/phel-lang` `^0.54` only.
 - Build: `composer build`. Test: `composer test` (Phel + PHPUnit). Format: `composer format`.
 - Run all three plus `composer validate --strict` before opening a PR; CI gates pushes on PHP 8.5.
 
-## Phel style (0.53)
+## Phel style (0.54)
 
 - Dot-separated namespaces — `phel.test`, `Symfony.Component.Console.Terminal`, `phel-cli-gui.terminal-gui` (not backslash).
 - Use `(new Foo arg)` for construction; `php/new`, `php/->` and `php/::` are compile errors since Phel 0.53.
